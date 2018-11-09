@@ -2868,3 +2868,71 @@ Traceback (most recent call last):
   File "F:\Users\frase\Documents\Projects\Hive\communication.py", line 398, in terminate
     Secretary.udp_server.close()
 AttributeError: 'tuple' object has no attribute 'close'
+ERROR:asyncio:Task exception was never retrieved
+future: <Task finished coro=<console_listener() done, defined at F:\Users\frase\Documents\Projects\Hive\cerebrate.py:21> exception=AttributeError("'ParseResult' object has no attribute '_scheme'",)>
+Traceback (most recent call last):
+  File "F:\Users\frase\Documents\Projects\Hive\cerebrate.py", line 28, in console_listener
+    await command.run_command(msg=communication.Message("cmd", "console", data=cmd))
+  File "F:\Users\frase\Documents\Projects\Hive\command.py", line 82, in run_command
+    result = await module_function(msg)
+  File "F:\Users\frase\Documents\Projects\Hive\commands\web.py", line 159, in save_site
+    ws.store_location(url=url, path_name=path_name)
+  File "F:\Users\frase\Documents\Projects\Hive\commands\web.py", line 67, in store_location
+    base = '://'.join((parsed_url._scheme, parsed_url._netloc))
+AttributeError: 'ParseResult' object has no attribute '_scheme'
+ERROR:asyncio:Task exception was never retrieved
+future: <Task finished coro=<console_listener() done, defined at F:\Users\frase\Documents\Projects\Hive\cerebrate.py:21> exception=AttributeError("'ParseResult' object has no attribute '_scheme'",)>
+Traceback (most recent call last):
+  File "F:\Users\frase\Documents\Projects\Hive\cerebrate.py", line 28, in console_listener
+    await command.run_command(msg=communication.Message("cmd", "console", data=cmd))
+  File "F:\Users\frase\Documents\Projects\Hive\command.py", line 82, in run_command
+    result = await module_function(msg)
+  File "F:\Users\frase\Documents\Projects\Hive\commands\web.py", line 161, in save_site
+    ws.store_location(url=url, path_name=path_name)
+  File "F:\Users\frase\Documents\Projects\Hive\commands\web.py", line 67, in store_location
+    scheme = parsed_url._scheme
+AttributeError: 'ParseResult' object has no attribute '_scheme'
+ERROR:asyncio:Task exception was never retrieved
+future: <Task finished coro=<console_listener() done, defined at F:\Users\frase\Documents\Projects\Hive\cerebrate.py:21> exception=AttributeError("'ParseResult' object has no attribute '_scheme'",)>
+Traceback (most recent call last):
+  File "F:\Users\frase\Documents\Projects\Hive\cerebrate.py", line 28, in console_listener
+    await command.run_command(msg=communication.Message("cmd", "console", data=cmd))
+  File "F:\Users\frase\Documents\Projects\Hive\command.py", line 82, in run_command
+    result = await module_function(msg)
+  File "F:\Users\frase\Documents\Projects\Hive\commands\web.py", line 161, in save_site
+    ws.store_location(url=url, path_name=path_name)
+  File "F:\Users\frase\Documents\Projects\Hive\commands\web.py", line 67, in store_location
+    scheme = parsed_url._scheme
+AttributeError: 'ParseResult' object has no attribute '_scheme'
+ERROR:asyncio:Task exception was never retrieved
+future: <Task finished coro=<console_listener() done, defined at F:\Users\frase\Documents\Projects\Hive\cerebrate.py:21> exception=TypeError("'list' object is not callable",)>
+Traceback (most recent call last):
+  File "F:\Users\frase\Documents\Projects\Hive\cerebrate.py", line 28, in console_listener
+    await command.run_command(msg=communication.Message("cmd", "console", data=cmd))
+  File "F:\Users\frase\Documents\Projects\Hive\command.py", line 82, in run_command
+    result = await module_function(msg)
+  File "F:\Users\frase\Documents\Projects\Hive\commands\web.py", line 158, in save_site
+    ws.store_location(url=url, path_name=path_name)
+  File "F:\Users\frase\Documents\Projects\Hive\commands\web.py", line 76, in store_location
+    self._query = ''.join((parsed_url.path, '?', parsed_url.query.split('=')(0)))
+TypeError: 'list' object is not callable
+ERROR:asyncio:Task exception was never retrieved
+future: <Task finished coro=<console_listener() done, defined at F:\Users\frase\Documents\Projects\Hive\cerebrate.py:21> exception=TypeError("'list' object is not callable",)>
+Traceback (most recent call last):
+  File "F:\Users\frase\Documents\Projects\Hive\cerebrate.py", line 28, in console_listener
+    await command.run_command(msg=communication.Message("cmd", "console", data=cmd))
+  File "F:\Users\frase\Documents\Projects\Hive\command.py", line 82, in run_command
+    result = await module_function(msg)
+  File "F:\Users\frase\Documents\Projects\Hive\commands\web.py", line 158, in save_site
+    ws.store_location(url=url, path_name=path_name)
+  File "F:\Users\frase\Documents\Projects\Hive\commands\web.py", line 76, in store_location
+    self._query = ''.join((parsed_url.path, '?', parsed_url.query.split('=')(0)))
+TypeError: 'list' object is not callable
+ERROR:asyncio:Task exception was never retrieved
+future: <Task finished coro=<terminate() done, defined at F:\Users\frase\Documents\Projects\Hive\communication.py:402> exception=AttributeError("'tuple' object has no attribute 'close'",)>
+Traceback (most recent call last):
+  File "F:\Users\frase\Documents\Projects\Hive\communication.py", line 408, in terminate
+    await Secretary.terminate()
+  File "F:\Users\frase\Documents\Projects\Hive\communication.py", line 398, in terminate
+    Secretary.udp_server.close()
+AttributeError: 'tuple' object has no attribute 'close'
