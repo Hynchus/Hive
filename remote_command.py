@@ -105,7 +105,7 @@ async def update_records(msg):
     for record in msg.data:
         #if Overmind receives new information then propagate it to other cerebrates
         if cerebratesinfo.update_cerebrate_record(cerebrate_record=record) and propagate:
-            await communication.Secretary.broadcast_message(msg=communication.Message("update_records", data=[record]))
+            communication.Secretary.broadcast_message(msg=communication.Message("update_records", data=[record]))
     if cc.RECIPROCATE in msg.header:
         return cc.REMOTE_COMMAND, communication.Message("update_records", data=cerebratesinfo.get_cerebrate_records_list())
     return cc.CLOSE_CONNECTION, "records updated"

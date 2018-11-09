@@ -1,7 +1,7 @@
 import enum
 import asyncio
 
-MY_VERSION = 0.45
+MY_VERSION = 0.46
 
 COMMAND = "cmd"
 REMOTE_COMMAND = "remotecmd"
