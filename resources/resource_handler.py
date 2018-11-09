@@ -79,14 +79,15 @@ def get_resource(section:str, key:str):
 		'''section doesn't exist or resource was saved incorrectly'''
 	return resource_value
 
-def get_resources(section:str):
+def get_resources(section:str, with_timestamp=False):
 	'''Generator for resources in given section.
 	Yields key, value tuples.
 	'''
 	try:
 		with shelve.open(filename=_get_file_location(section=section), flag='r') as s:
 			for key, value in s.items():
-				value = value.get(RESOURCE_VALUE, value)
+				if not with_timestamp:
+					value = value.get(RESOURCE_VALUE, value)
 				yield key, value
 	except:
 		'''section doesn't exist'''
@@ -103,14 +104,14 @@ def get_resource_keys(section:str):
 		'''section doesn't exist'''
 	return keys
 
-def get_all_resources_by_section():
+def get_all_resources_by_section(with_timestamp=False):
 	'''Generator for all sections.
 	Yields section and a dict of resources.
 	'''
 	for dirname, _, _ in os.walk(RESOURCES_BASE_LOCATION):
 		section = os.path.basename(dirname)
 		resources = {}
-		for key, value in get_resources(section):
+		for key, value in get_resources(section=section, with_timestamp=with_timestamp):
 			resources[key] = value
 		yield section, resources
 

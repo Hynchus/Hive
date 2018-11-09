@@ -83,7 +83,7 @@ async def acknowledge(msg):
     #Send a current list of records
     await communication.Secretary.communicate_message(cerebrate_mac=msg.sender_mac, msg=communication.Message("update_records", cc.RECIPROCATE, cc.OVERRULE, data=cerebratesinfo.get_cerebrate_records_list()))
     #Send a current list of resources
-    for section, resource_dict in resource_handler.get_all_resources_by_section():
+    for section, resource_dict in resource_handler.get_all_resources_by_section(with_timestamp=True):
         if len(resource_dict) >= 1:
             await communication.Secretary.communicate_message(cerebrate_mac=msg.sender_mac, msg=communication.Message("update_resources", ':'.join((str(resource_handler.Resource.SECTION), section)), data=[resource_dict]))
     #Ensure up-to-date files

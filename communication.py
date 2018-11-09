@@ -215,8 +215,7 @@ class Secretary(asyncio.Protocol):
         try:
             if not Secretary.terminating:
                 fut = Secretary.__communicate(reader=reader, writer=writer)
-                close_reason = await Secretary.__communicate(reader=reader, writer=writer)
-                #close_reason = await asyncio.wait_for(fut=fut, timeout=COMMUNICATION_TIMEOUT, loop=event_loop)
+                close_reason = await asyncio.wait_for(fut=fut, timeout=COMMUNICATION_TIMEOUT, loop=event_loop)
         except asyncio.TimeoutError:
             close_reason = TIMEOUT
             raise asyncio.TimeoutError()
