@@ -1,0 +1,6 @@
+# Don't need txt files
+*.txt
+# VSCode stuff is local
+/.vscode
+# Not saving backups in repository
+/backup
