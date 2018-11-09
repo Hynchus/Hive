@@ -5,5 +5,7 @@
 */.vscode
 /__pycache__
 */__pycache__
+# Don't need logs
+*.log
 # Not saving backups in repository
 */backup
