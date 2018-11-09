@@ -1,6 +1,7 @@
 # Don't need txt files
 *.txt
-# VSCode stuff is local
+# VSCode and pycache stuff are local
 /.vscode
+/__pycache__
 # Not saving backups in repository
 /backup
