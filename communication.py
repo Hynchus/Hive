@@ -140,7 +140,6 @@ class Secretary(asyncio.Protocol):
             data = close_reason
         await Secretary._write_message(writer=writer, msg=Message(cc.CLOSE_CONNECTION, data=data))
         writer.close()
-        #await writer.wait_closed()
 
     @staticmethod
     @print_func_name
@@ -222,7 +221,8 @@ class Secretary(asyncio.Protocol):
         except Exception as _:
             traceback.print_exc()
         finally:
-            await Secretary.close_connection(reader=reader, writer=writer, close_reason=close_reason)
+            with suppress(RuntimeError):
+                await Secretary.close_connection(reader=reader, writer=writer, close_reason=close_reason)
         return close_reason
 
     @staticmethod
