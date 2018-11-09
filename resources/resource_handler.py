@@ -28,7 +28,7 @@ def _update_resources_modified_time(resources:dict):
 	Returns resources.
 	'''
 	for key, value in resources.items():
-		if value.get(MODIFIED_TIME, None) or value.get(RESOURCE_VALUE, None):
+		if type(value) is dict and value.get(MODIFIED_TIME, None):
 			value[MODIFIED_TIME] = datetime.datetime.now()
 		else:
 			value = {RESOURCE_VALUE: value, MODIFIED_TIME: datetime.datetime.now()}
@@ -43,9 +43,8 @@ def set_resources(section:str, resources:dict):
 		timestamped_resources = _update_resources_modified_time(resources)
 		with shelve.open(filename=_get_file_location(section=section), flag='c', writeback=True) as s:
 			s.update(timestamped_resources)
-		
 		asyncio.ensure_future(communication.Secretary.communicate_message(cerebratesinfo.get_overmind_mac(), msg=communication.Message("update_resources", ':'.join((str(Resource.SECTION), section)), data=[timestamped_resources])))
-	except Exception as ex:
+	except Exception:
 		return False
 	return True
 
@@ -74,8 +73,10 @@ def get_resource(section:str, key:str):
 		resource_value = None
 		with shelve.open(filename=_get_file_location(section=section), flag='r') as s:
 			resource_value = s.get(key, None)
+			if resource_value:
+				resource_value = resource_value.get(RESOURCE_VALUE, resource_value)
 	except:
-		'''section doesn't exist'''
+		'''section doesn't exist or resource was saved incorrectly'''
 	return resource_value
 
 def get_resources(section:str):

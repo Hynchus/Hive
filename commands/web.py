@@ -64,7 +64,7 @@ class Website:
         parsed_url = urlparse(url)
         # store scheme
         if not self._base:
-            self._base = '://'.join((parsed_url._scheme, parsed_url._netloc))
+            self._base = '://'.join((parsed_url.scheme, parsed_url.netloc))
         # store domain
         if not self.domain:
             self._domain = parsed_url.netloc
@@ -72,7 +72,7 @@ class Website:
             feedback("Non-matching domain")
             raise ValueError
         # store query format
-        if not self._query and not parsed_url.query.isspace():
+        if not self._query and '=' in parsed_url.query:
             self._query = ''.join((parsed_url.path, '?', parsed_url.query.split('=')(0)))
         # store path
         if not path_name:
@@ -91,6 +91,7 @@ class Website:
         Returns the best match (even if it isn't a good match) as a dict containing "match" and "char_count".
         '''
         possible_matches = [' '.join((self.domain, path_name)) for path_name in self._paths.keys()]
+        possible_matches.append(self.domain)
         return get_greedy_match(match_string=match_string, possible_matches=possible_matches)
 
     def get_url(self, path_name:str=''):
@@ -160,6 +161,29 @@ async def save_site(msg):
     resource_handler.set_resources(section=_WEBSITE_SECTION, resources=resources)
     return True
 
+def _start_browser(lock=_browser_lock):
+    global _browser
+    with lock:
+        if cc.feedback_on_commands():
+            feedback("Opening a new browser, just a moment...")
+        _browser = Firefox(executable_path=os.path.join(get_my_directory(), "drivers", "geckodriver.exe"))
+
+def _open_tab(url:str="", lock=_browser_lock, recurse=True):
+    global _browser
+    if not recurse:
+        feedback("_open_tab failed on second try")
+        raise EnvironmentError
+    with lock:
+        try:
+            handles_before = _browser.window_handles
+            _browser.execute_script(''.join(("window.open('", url, "')")))
+            new_handle = [handle for handle in _browser.window_handles if handle not in handles_before][0]
+            _browser.switch_to.window(new_handle)
+        except:
+            #_browser was closed by an outside force
+            _start_browser(lock=_Lock_Bypass())
+            _open_tab(url=url, lock=_Lock_Bypass(), recurse=False)
+
 def _open_browser(msg=None, lock=_browser_lock):
     '''Opens a browser, or a new tab if already open. Goes to target page if specified in Message.'''
     global _browser
@@ -192,42 +216,38 @@ def _open_browser(msg=None, lock=_browser_lock):
                         return False
         with lock:
             if not _browser:
-                if cc.feedback_on_commands():
-                    feedback("Opening a new browser, just a moment...")
-                _browser = Firefox(executable_path=os.path.join(get_my_directory(), "drivers", "geckodriver.exe"))
+                _start_browser(lock=_Lock_Bypass())
                 _browser.get(new_url)
             else:
-                handles_before = _browser.window_handles
-                _browser.execute_script(''.join(("window.open('", new_url, "')")))
-                new_handle = [handle for handle in _browser.window_handles if handle not in handles_before][0]
-                _browser.switch_to.window(new_handle)
+                _open_tab(url=new_url, lock=_Lock_Bypass())
             if cc.feedback_on_commands():
                 feedback(''.join((_browser.title, " is open.")))
     except:
         traceback.print_exc()
-        _close_browser(msg)
-        return _open_browser(msg)
     return True
 
 @athreaded
 def google(msg):
     query = msg.data.lower()
     query = query.split('google', 1)[1].strip()
-    try:
-        with _browser_lock:
-            open_new = True
-            if not _browser:
-                _open_browser(lock=_Lock_Bypass())
-            for handle in _browser.window_handles:
-                _browser.switch_to.window(handle)
-                if _browser.title == "Google":
+    with _browser_lock:
+        try:
+                open_new = True
+                if not _browser:
+                    _start_browser(lock=_Lock_Bypass())
                     open_new = False
-                    break
-            if open_new:
-                _open_browser(lock=_Lock_Bypass())
-            _browser.get(''.join(('https://www.google.ca/search?q=', query)))
-    except:
-        '''browser/tab was closed between opening and url get'''
+                for handle in _browser.window_handles:
+                    _browser.switch_to.window(handle)
+                    if _browser.title == "Google":
+                        open_new = False
+                        break
+                if open_new:
+                    _open_tab(lock=_Lock_Bypass())
+        except:
+            '''browser/tab was closed by an outside force'''
+            _start_browser(lock=_Lock_Bypass())
+        _browser.get(''.join(('https://www.google.ca/search?q=', query)))
+        
     return True
 
 def _close_browser(msg=None, lock=_browser_lock):
@@ -289,8 +309,6 @@ def _quit_browser(lock=_browser_lock):
             _browser.quit()
         except:
             '''browser already doesn't exist'''
-            if cc.debug_in_effect:
-                traceback.print_exc()   
         finally:
             _browser = None
 
