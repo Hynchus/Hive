@@ -43,7 +43,7 @@ def set_resources(section:str, resources:dict):
 		timestamped_resources = _update_resources_modified_time(resources)
 		with shelve.open(filename=_get_file_location(section=section), flag='c', writeback=True) as s:
 			s.update(timestamped_resources)
-		asyncio.ensure_future(communication.Secretary.communicate_message(cerebratesinfo.get_overmind_mac(), msg=communication.Message("update_resources", ':'.join((str(Resource.SECTION), section)), data=[timestamped_resources])))
+		asyncio.ensure_future(communication.Secretary.communicate_message(cerebratesinfo.get_overmind_mac(), msg=communication.Message("update_resources", ':'.join((str(Resource.SECTION), section)), data=[timestamped_resources])), loop=asyncio.get_event_loop())
 	except Exception:
 		return False
 	return True
@@ -62,7 +62,7 @@ def update_resources(section:str, resources:dict):
 	except:
 		raise
 	if len(updated_resources) > 0:
-		asyncio.ensure_future(communication.Secretary.communicate_message(cerebrate_mac=cerebratesinfo.get_overmind_mac(), msg=communication.Message("update_resources", ':'.join((str(Resource.SECTION), section)), data=[updated_resources])))
+		asyncio.ensure_future(communication.Secretary.communicate_message(cerebrate_mac=cerebratesinfo.get_overmind_mac(), msg=communication.Message("update_resources", ':'.join((str(Resource.SECTION), section)), data=[updated_resources])), loop=asyncio.get_event_loop())
 	return updated_resources
 
 def get_resource(section:str, key:str):

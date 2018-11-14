@@ -25,6 +25,7 @@ pycparser==2.19
 pylint==1.9.2
 pyperclip==1.7.0
 requests==2.20.0
+requirements==0.1
 rope==0.10.7
 selenium==3.14.1
 six==1.11.0
