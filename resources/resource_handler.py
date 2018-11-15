@@ -4,8 +4,9 @@ import datetime
 import cerebratesinfo
 import communication
 import asyncio
+import traceback
 from definitions import Resource
-from mysysteminfo import get_hive_directory
+from mysysteminfo import get_hive_directory, get_mac_address
 
 RESOURCES_BASE_LOCATION = os.path.join(get_hive_directory(), "resources")
 RESOURCE_FILE_EXTENSION = "res"
@@ -35,6 +36,22 @@ def _update_resources_modified_time(resources:dict):
 		resources[key] = value
 	return resources
 
+def propagate_resources(section:str, timestamped_resources:dict):
+	loop = None
+	run_loop_manually = False
+	try:
+		loop = asyncio.get_event_loop()
+	except:
+		loop = asyncio.new_event_loop()
+		run_loop_manually = True
+	overmind_mac = cerebratesinfo.get_overmind_mac()
+	if get_mac_address() == overmind_mac:
+		asyncio.ensure_future(communication.Secretary.broadcast_message(msg=communication.Message("update_resources", ':'.join((str(Resource.SECTION), section)), data=[timestamped_resources])), loop=loop)
+	else:
+		asyncio.ensure_future(communication.Secretary.communicate_message(overmind_mac, msg=communication.Message("update_resources", ':'.join((str(Resource.SECTION), section)), data=[timestamped_resources])), loop=loop)
+	if run_loop_manually:
+		loop.run_until_complete()
+
 def set_resources(section:str, resources:dict):
 	'''Saves  resources for later reference, overwriting existing records with the same keys.
 	Returns False if unsuccessful.
@@ -43,8 +60,9 @@ def set_resources(section:str, resources:dict):
 		timestamped_resources = _update_resources_modified_time(resources)
 		with shelve.open(filename=_get_file_location(section=section), flag='c', writeback=True) as s:
 			s.update(timestamped_resources)
-		asyncio.ensure_future(communication.Secretary.communicate_message(cerebratesinfo.get_overmind_mac(), msg=communication.Message("update_resources", ':'.join((str(Resource.SECTION), section)), data=[timestamped_resources])), loop=asyncio.get_event_loop())
+		propagate_resources(section=section, timestamped_resources=timestamped_resources)
 	except Exception:
+		traceback.print_exc()
 		return False
 	return True
 
@@ -61,8 +79,9 @@ def update_resources(section:str, resources:dict):
 					updated_resources[key] = value
 	except:
 		raise
-	if len(updated_resources) > 0:
-		asyncio.ensure_future(communication.Secretary.communicate_message(cerebrate_mac=cerebratesinfo.get_overmind_mac(), msg=communication.Message("update_resources", ':'.join((str(Resource.SECTION), section)), data=[updated_resources])), loop=asyncio.get_event_loop())
+	#update_resources() should only be used when updating from or to the Overmind already, so propagation isn't necessary here
+	#if len(updated_resources) > 0:
+	#	propagate_resources(section=section, timestamped_resources=updated_resources)
 	return updated_resources
 
 def get_resource(section:str, key:str):
