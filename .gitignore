@@ -1,11 +1,17 @@
 # Don't need txt files
 *.txt
+
 # VSCode and pycache stuff are local
 /.vscode
 */.vscode
 /__pycache__
 */__pycache__
+
 # Don't need logs
 *.log
+
 # Not saving backups in repository
 */backup
+
+# Files that should be transferred manually only
+*development_cerebrate*

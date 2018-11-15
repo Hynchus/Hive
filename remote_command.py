@@ -12,6 +12,8 @@ from definitions import Resource
 from resources import resource_handler
 
 
+
+
 async def ping(msg):
     if msg.data != None:
         aprint(msg.data)
@@ -71,6 +73,19 @@ async def _designate_overmind(mac):
         communication.Secretary.broadcast_message(msg=communication.Message("update_records", cc.OVERRULE, data=[cerebratesinfo.get_overmind_record()]))
 
 @print_func_name
+async def _send_all_resources(cerebrate_mac):
+    for section, resource_dict in resource_handler.get_all_resources_by_section(with_timestamp=True):
+        if len(resource_dict) >= 1:
+            await communication.Secretary.communicate_message(cerebrate_mac=cerebrate_mac, msg=communication.Message("update_resources", ':'.join((str(resource_handler.Resource.SECTION), section)), data=[resource_dict]))
+
+@print_func_name
+async def send_resources(msg):
+    '''Sends all locally stored resources to msg sender.
+    '''
+    await _send_all_resources(cerebrate_mac=msg.sender_mac)
+    return cc.CLOSE_CONNECTION, cc.SUCCESS
+
+@print_func_name
 async def acknowledge(msg):
     '''Initiates file and record updating between cerebrates.
     When a cerebrate comes online it broadcasts to other cerebrates asking for acknowledgment.
@@ -83,9 +98,9 @@ async def acknowledge(msg):
     #Send a current list of records
     await communication.Secretary.communicate_message(cerebrate_mac=msg.sender_mac, msg=communication.Message("update_records", cc.RECIPROCATE, cc.OVERRULE, data=cerebratesinfo.get_cerebrate_records_list()))
     #Send a current list of resources
-    for section, resource_dict in resource_handler.get_all_resources_by_section(with_timestamp=True):
-        if len(resource_dict) >= 1:
-            await communication.Secretary.communicate_message(cerebrate_mac=msg.sender_mac, msg=communication.Message("update_resources", ':'.join((str(resource_handler.Resource.SECTION), section)), data=[resource_dict]))
+    await _send_all_resources(cerebrate_mac=msg.sender_mac)
+    #Get a current list of their resources
+    await communication.Secretary.communicate_message(cerebrate_mac=msg.sender_mac, msg=communication.Message("send_resources"))
     #Ensure up-to-date files
     if msg.data.get("version", None):
         return await check_version(msg=msg)
@@ -95,7 +110,7 @@ async def acknowledge(msg):
 async def update_records(msg):
     '''Message data must contain a list of cerebrate records.
     Updates the local cerebrate records with the given ones, if the given ones contain more recent information.
-    If 'reciprocate' is in the header a Message containing the local copy of updated cerebrate records will be returned.
+    If CC.RECIPROCATE is in the header a Message containing the local copy of updated cerebrate records will be returned.
     '''
     if cc.OVERRULE in msg.header:
         dprint("Being overruled")
@@ -118,18 +133,20 @@ async def update_resources(msg):
     '''
     dprint("updating resources from ", msg.sender_mac)
     propagate = (cerebratesinfo.get_overmind_mac() == mysysteminfo.get_mac_address())
+    section = None
+    for header in msg.header:
+        if str(Resource.SECTION) in header:
+            split_header = header.split(':')
+            if len(split_header) <= 1:
+                continue
+            section = split_header[len(split_header) - 1]
+            if section:
+                break
+    if not section:
+        return cc.CLOSE_CONNECTION, "no section supplied in header"
     for resources in msg.data:
         #if Overmind receives new information then propagate it to other cerebrates
-        section = None
-        for header in msg.header:
-            if str(Resource.SECTION) in header:
-                split_header = header.split(':')
-                if len(split_header) <= 1:
-                    continue
-                section = split_header[len(split_header) - 1]
-                if not section.isspace():
-                    break
-        if section and resource_handler.update_resources(section=section, resources=resources) and propagate:
+        if resource_handler.update_resources(section=section, resources=resources) and propagate:
             communication.Secretary.broadcast_message(msg=communication.Message("update_resources", ':'.join((str(Resource.SECTION), section)), data=[resources]))
     return cc.CLOSE_CONNECTION, "resources updated"
 
@@ -172,6 +189,7 @@ commands = {
     'display_message': {command.Command.FUNCTION: display_message},
     'assume_overmind': {command.Command.FUNCTION: assume_overmind},
     'check_version': {command.Command.FUNCTION: check_version},
+    'send_resources': {command.Command.FUNCTION: send_resources},
     'send_update': {command.Command.FUNCTION: send_update},
     'restart': {command.Command.FUNCTION: restart}
 }
