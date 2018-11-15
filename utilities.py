@@ -8,6 +8,7 @@ from collections import defaultdict
 from aioconsole import ainput
 import cerebrate_config as cc, mysysteminfo
 from definitions import CEREBRATE_FILE_EXTENSIONS
+from async_queue import queue_coroutine
 
 
 async def prompt(prompt_string:str):
@@ -120,20 +121,9 @@ def get_greedy_match(match_string:str, possible_matches:list, minimum_word_size:
     return {"match": match[0], "char_count": match[1]}
 
 def run_coroutine(coroutine):
-    '''Attempts to run the given coroutine in the current event loop.
-    If there isn't one a temporary event loop is created to run the coroutine.
+    '''Attempts to run the given coroutine in the future.
     Does not return anything.
     '''
     if not coroutine:
         return
-    loop = None
-    run_loop_manually = False
-    try:
-        loop = asyncio.get_event_loop()
-    except:
-        loop = asyncio.new_event_loop()
-        run_loop_manually = True
-    if run_loop_manually:
-        loop.run_until_complete(coroutine)
-    else:
-        asyncio.ensure_future(coroutine)
+    queue_coroutine(coroutine=coroutine)

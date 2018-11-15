@@ -11,6 +11,7 @@ try:
     import traceback
     import logging
     from contextlib import suppress
+    from async_queue import initialize_async_queue
 except ImportError:
     install_requirements()
     restart_cerebrate()
@@ -52,6 +53,7 @@ def start_listeners(loop):
 
 def setup_loop():
     loop = asyncio.get_event_loop()
+    initialize_async_queue(event_loop=loop)
     return loop
 
 def say_hello():
