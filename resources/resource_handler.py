@@ -79,9 +79,8 @@ def update_resources(section:str, resources:dict):
 					updated_resources[key] = value
 	except:
 		raise
-	#update_resources() should only be used when updating from or to the Overmind already, so propagation isn't necessary here
-	#if len(updated_resources) > 0:
-	#	propagate_resources(section=section, timestamped_resources=updated_resources)
+	if len(updated_resources) > 0 and get_mac_address() == cerebratesinfo.get_overmind_mac():
+		propagate_resources(section=section, timestamped_resources=updated_resources)
 	return updated_resources
 
 def get_resource(section:str, key:str):

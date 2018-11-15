@@ -42,7 +42,7 @@ async def audio_listener(loop):
             await command.run_command(msg=communication.Message("cmd", "voice", data=voice_input))
         except EnvironmentError:
             cc.accept_audio_control.clear()
-        except Exception as ex:
+        except Exception:
             traceback.print_exc()
             
 def start_listeners(loop):

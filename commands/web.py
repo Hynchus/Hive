@@ -226,7 +226,6 @@ def search_site(msg):
     data = distill_msg(msg=msg, sediment="search").data.strip()
     if not data:
         return False
-    search_url = None
     try:
         parsed_data = data.split("for")
         site_name = parsed_data[0]
