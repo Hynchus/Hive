@@ -118,3 +118,22 @@ def get_greedy_match(match_string:str, possible_matches:list, minimum_word_size:
         return {"match": None, "char_count": None}
     match = sorted(matches.items(), key=lambda x: x[1], reverse=True)[0]
     return {"match": match[0], "char_count": match[1]}
+
+def run_coroutine(coroutine):
+    '''Attempts to run the given coroutine in the current event loop.
+    If there isn't one a temporary event loop is created to run the coroutine.
+    Does not return anything.
+    '''
+    if not coroutine:
+        return
+    loop = None
+    run_loop_manually = False
+    try:
+        loop = asyncio.get_event_loop()
+    except:
+        loop = asyncio.new_event_loop()
+        run_loop_manually = True
+    if run_loop_manually:
+        loop.run_until_complete(coroutine)
+    else:
+        asyncio.ensure_future(coroutine)

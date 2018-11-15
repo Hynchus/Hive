@@ -5,6 +5,7 @@ import cerebratesinfo
 import communication
 import asyncio
 import traceback
+from utilities import run_coroutine
 from definitions import Resource
 from mysysteminfo import get_hive_directory, get_mac_address
 
@@ -37,20 +38,11 @@ def _update_resources_modified_time(resources:dict):
 	return resources
 
 def propagate_resources(section:str, timestamped_resources:dict):
-	loop = None
-	run_loop_manually = False
-	try:
-		loop = asyncio.get_event_loop()
-	except:
-		loop = asyncio.new_event_loop()
-		run_loop_manually = True
 	overmind_mac = cerebratesinfo.get_overmind_mac()
 	if get_mac_address() == overmind_mac:
-		asyncio.ensure_future(communication.Secretary.broadcast_message(msg=communication.Message("update_resources", ':'.join((str(Resource.SECTION), section)), data=[timestamped_resources])), loop=loop)
+		run_coroutine(communication.Secretary.broadcast_message(msg=communication.Message("update_resources", ':'.join((str(Resource.SECTION), section)), data=[timestamped_resources])))
 	else:
-		asyncio.ensure_future(communication.Secretary.communicate_message(overmind_mac, msg=communication.Message("update_resources", ':'.join((str(Resource.SECTION), section)), data=[timestamped_resources])), loop=loop)
-	if run_loop_manually:
-		loop.run_until_complete()
+		run_coroutine(communication.Secretary.communicate_message(overmind_mac, msg=communication.Message("update_resources", ':'.join((str(Resource.SECTION), section)), data=[timestamped_resources])))
 
 def set_resources(section:str, resources:dict):
 	'''Saves  resources for later reference, overwriting existing records with the same keys.

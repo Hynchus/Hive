@@ -376,6 +376,8 @@ def open_browser(msg=None):
         #get match_string from msg, get URL from Website using match_string
         data = distill_msg(msg=msg, sediment="open").data.strip()
         url = Website.get_url_greedy_match(match_string=data)
+        if not url and not "browser" in data:
+            return False
     return _open_browser(url=url)
     
 @athreaded
