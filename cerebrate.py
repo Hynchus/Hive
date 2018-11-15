@@ -16,7 +16,7 @@ except ImportError:
     restart_cerebrate()
 
 def sigint_handler(signum, frame):
-    terminate()
+    asyncio.ensure_future(terminate(), loop=asyncio.get_event_loop())
 
 async def console_listener():
     prompt = "\n)))"
@@ -116,7 +116,7 @@ def restart_cerebrate():
     print("Restarting cerebrate...")
     os.execv(sys.executable, ['python'] + sys.argv)
 
-def terminate(msg=None, loop=None):
+async def terminate(msg=None, loop=None):
     await say_goodbye()
     cc.change_my_state(state=cc.State.TERMINATING)
     if not loop:
@@ -139,7 +139,6 @@ if __name__ == '__main__':
         print("EXCEPTION")
         traceback.print_exc()
     finally:
-        print(name)
         print("\nCerebrate going offline...")
         loop.run_until_complete(loop.shutdown_asyncgens())
         loop.close()

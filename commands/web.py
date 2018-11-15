@@ -9,7 +9,7 @@ from utilities import get_greedy_match, dprint
 from communication import distill_msg, Secretary, Message
 from feedback import feedback
 from validators.url import url as validate_url
-from urllib.parse import urlparse, urljoin
+from urllib.parse import urlparse, urljoin, ParseResult
 import cerebratesinfo
 import cerebrate_config as cc
 import asyncio
@@ -40,11 +40,13 @@ _browser_lock = Lock()
 
 class Website:
     '''Holds information about the given website.
-    Raises ValueError if the given url does not validate.
+    URL is optional, however the returned Website will be empty if no URL is given. Use Website.store_location() on a Website to store a url in it.
+    path_name is optional, however only the domain and possibly the search pattern will be stored if path_name is not given.
+    Raises ValueError if a given url does not validate.
     '''
-    _domain = None
-    _base = None
-    _query = None
+    _domain = ""
+    _base = ""
+    _query = ""
     _paths = {}
 
     def __init__(self, url:str=None, path_name:str=None):
@@ -54,6 +56,29 @@ class Website:
     @property
     def domain(self):
         return self._domain
+
+    def _store_query_pattern(self, parsed_url:ParseResult):
+        if '=' in parsed_url.query:
+            query_string = None
+            if '&' in parsed_url.query:
+                #organize the terms so that the query term is furthest right
+                query_term_found = False
+                terms = []
+                for term in parsed_url.query.split('&'):
+                    if "query" in term:
+                        query_term_found = True
+                        terms.append(term)
+                    elif not query_term_found and 'q' in term:
+                        terms.append(term)
+                    else:
+                        terms.insert(0, term)
+                #clear any input to the right of the query term's '='
+                terms[len(terms)-1] = ''.join((terms[len(terms)-1].split('=')[0], '='))
+                query_string = '&'.join(terms)
+            else:
+                query_string = ''.join((parsed_url.query.split('=')[0], '='))
+
+            self._query = ''.join((parsed_url.path, '?', query_string))
 
     def store_location(self, url:str, path_name:str=None):
         '''Stores the given URL as the given name.
@@ -72,10 +97,8 @@ class Website:
         if not self.domain in parsed_url.netloc:
             feedback("Non-matching domain")
             raise ValueError
-        # store query format
-        if not self._query:
-            if '=' in parsed_url.query:
-                self._query = ''.join((parsed_url.path, '?', parsed_url.query.split('=')[0]))
+        # store query pattern
+        self._store_query_pattern(parsed_url=parsed_url)
         # store path
         if not path_name:
             return
@@ -109,14 +132,14 @@ class Website:
                 break
         return url
 
-    def get_query_url(self, query_string:str):
+    def get_query_url(self, query_string:str=''):
         '''Returns the full URL to search for the given term.
         Requires the query pattern to have been saved previously.
         If no query pattern is currently stored returns None.
         '''
         if not self._query.strip():
             return None
-        query = '='.join((self._query, query_string))
+        query = ''.join((self._query, query_string))
         return urljoin(base=self._base, url=query)
 
     @staticmethod
@@ -159,6 +182,14 @@ async def parse(msg):
         return False
     parsed_url = urlparse(url)
     print(parsed_url)
+    print()
+    ws = Website(url = url, path_name="test")
+    print("Stored domain", '\n', ws.domain)
+    print("Stored URL", '\n', ws.get_url(path_name="test"))
+    search_url = ws.get_query_url()
+    if search_url:
+        print("Stored search URL", '\n', search_url)
+
     return True
     
 @athreaded
