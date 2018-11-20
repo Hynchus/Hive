@@ -8,6 +8,7 @@ import traceback
 from utilities import run_coroutine
 from definitions import Resource
 from mysysteminfo import get_hive_directory, get_mac_address
+from abc import ABC, abstractmethod
 
 RESOURCES_BASE_LOCATION = os.path.join(get_hive_directory(), "resources")
 RESOURCE_FILE_EXTENSION = "res"
@@ -16,6 +17,18 @@ MODIFIED_TIME = "res_modified_time"
 RESOURCE_VALUE = "res_value"
 
 initialized = False
+
+
+class Resource_BC(ABC):
+	'''Base class for resource classes.
+	'''
+	@abstractmethod
+	def update(self, resource):
+		'''Updates this resource instance with the given resource instance.
+		If given resource instance class does not match this one an EnvironmentError will be raised.
+		'''
+		if type(resource) != type(self):
+			raise EnvironmentError
 
 
 def _get_file_location(section:str):
@@ -44,7 +57,7 @@ def propagate_resources(section:str, timestamped_resources:dict):
 	else:
 		run_coroutine(communication.Secretary.communicate_message(overmind_mac, msg=communication.Message("update_resources", ':'.join((str(Resource.SECTION), section)), data=[timestamped_resources])))
 
-def set_resources(section:str, resources:dict):
+def store_resources(section:str, resources:dict):
 	'''Saves  resources for later reference, overwriting existing records with the same keys.
 	Returns False if unsuccessful.
 	'''
@@ -62,13 +75,24 @@ def update_resources(section:str, resources:dict):
 	'''Updates resources if the given resources are more recent.
 	Returns a dict of the updated resources.
 	'''
+	# NOT CORRECT: If local copy of resource has had more recent changes it will not accept the given resource, even if it contains changes local has not seen
 	updated_resources = {}
 	try:
 		with shelve.open(filename=_get_file_location(section=section), flag='c', writeback=True) as s:
 			for key, value in resources.items():
-				if key not in s or value.get(MODIFIED_TIME, datetime.datetime(1, 1, 1)) > s[key].get(MODIFIED_TIME, datetime.datetime(1, 1, 1)):
+				if key not in s.keys():
 					s[key] = value
 					updated_resources[key] = value
+				elif value.get(MODIFIED_TIME, datetime.datetime(1, 1, 1)) > s[key].get(MODIFIED_TIME, datetime.datetime(1, 1, 1)):
+					try:
+						#if resource is derived from Resource_BC
+						s[key][RESOURCE_VALUE].update(value[RESOURCE_VALUE])
+						s[key][MODIFIED_TIME] = value[MODIFIED_TIME]
+					except:
+						#resource is not derived from Resource_BC
+						s[key] = value
+					updated_resources[key] = s[key]
+						
 	except:
 		raise
 	if len(updated_resources) > 0 and get_mac_address() == cerebratesinfo.get_overmind_mac():

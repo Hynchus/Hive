@@ -38,7 +38,7 @@ _browser = None
 _browser_lock = Lock()
 
 
-class Website:
+class Website(resource_handler.Resource_BC):
     '''Holds information about the given website.
     URL is optional, however the returned Website will be empty if no URL is given. Use Website.store_location() on a Website to store a url in it.
     path_name is optional, however only the domain and possibly the search pattern will be stored if path_name is not given.
@@ -56,6 +56,19 @@ class Website:
     @property
     def domain(self):
         return self._domain
+
+    def update(self, resource):
+        '''Updates this resource instance with the given resource instance.
+        Raises EnvironmentError if given resource instance does not match this instance.
+        '''
+        try:
+            super().update(resource=resource)
+        except:
+            raise
+        if self.domain != resource.domain:
+            return False
+        self._paths.update(resource._paths)
+        return True
 
     def _store_query_pattern(self, parsed_url:ParseResult):
         if '=' in parsed_url.query:
@@ -218,7 +231,7 @@ def save_site(msg):
         ws = Website()
     ws.store_location(url=url, path_name=path_name)
     resources = {ws.domain: ws}
-    resource_handler.set_resources(section=_WEBSITE_SECTION, resources=resources)
+    resource_handler.store_resources(section=_WEBSITE_SECTION, resources=resources)
     return True
 
 @athreaded
@@ -241,6 +254,7 @@ def search_site(msg):
 
 def _start_browser(lock=_browser_lock):
     global _browser
+    _quit_browser(lock=lock)
     with lock:
         if cc.feedback_on_commands():
             feedback("Opening a new browser, just a moment...")
