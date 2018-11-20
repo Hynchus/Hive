@@ -62,10 +62,12 @@ def store_resources(section:str, resources:dict):
 	Returns False if unsuccessful.
 	'''
 	try:
+		if len(resources) <= 0:
+			return True
 		timestamped_resources = _update_resources_modified_time(resources)
-		with shelve.open(filename=_get_file_location(section=section), flag='c', writeback=True) as s:
-			s.update(timestamped_resources)
-		propagate_resources(section=section, timestamped_resources=timestamped_resources)
+		update_resources(section=section, resources=resources)
+		if get_mac_address() != cerebratesinfo.get_overmind_mac():
+			propagate_resources(section=section, timestamped_resources=timestamped_resources)
 	except Exception:
 		traceback.print_exc()
 		return False
@@ -75,7 +77,7 @@ def update_resources(section:str, resources:dict):
 	'''Updates resources if the given resources are more recent.
 	Returns a dict of the updated resources.
 	'''
-	# NOT CORRECT: If local copy of resource has had more recent changes it will not accept the given resource, even if it contains changes local has not seen
+	# NOT FULLY CORRECT: If local copy of resource has had more recent changes it will not accept the given resource even if given contains changes local has not seen
 	updated_resources = {}
 	try:
 		with shelve.open(filename=_get_file_location(section=section), flag='c', writeback=True) as s:
@@ -92,7 +94,6 @@ def update_resources(section:str, resources:dict):
 						#resource is not derived from Resource_BC
 						s[key] = value
 					updated_resources[key] = s[key]
-						
 	except:
 		raise
 	if len(updated_resources) > 0 and get_mac_address() == cerebratesinfo.get_overmind_mac():
