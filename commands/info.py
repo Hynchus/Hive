@@ -10,7 +10,7 @@ import re
 
 _commands = {
     '_change_': {Command.NAME: 'Change Info', Command.DESCRIPTION: 'Change intended information.', Command.USE: 'change [info specifier][new info]', Command.FUNCTION: "change"},
-    '_list_': {Command.NAME: 'List Info', Command.DESCRIPTION: 'Lists requested information.', Command.USE: 'list [info specifier][filter terms]', Command.FUNCTION: "list_info"},
+    '_list_': {Command.NAME: 'List Info', Command.DESCRIPTION: 'Displays requested information.', Command.USE: 'list [info specifier][filter terms]', Command.FUNCTION: "list_info"},
     '_help_': {Command.NAME: 'Help', Command.DESCRIPTION: 'Get descriptions and use examples for available commands.', Command.USE: 'help [command specifier(s)]', Command.FUNCTION: "info"}
 }
 

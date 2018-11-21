@@ -5,7 +5,7 @@ from resources import resource_handler
 from definitions import Command
 from mysysteminfo import get_my_directory
 from decorators import athreaded
-from utilities import get_greedy_match, dprint
+from utilities import get_greedy_match, intersect_strings, dprint, pad_string
 from communication import distill_msg, Secretary, Message
 from feedback import feedback
 from validators.url import url as validate_url
@@ -27,7 +27,8 @@ _commands = {
     '_google_': {Command.NAME: 'Google', Command.DESCRIPTION: 'Searches Google for request.', Command.USE: 'google [request]', Command.FUNCTION: "google"},
     '_save_': {Command.NAME: 'Save Site', Command.DESCRIPTION: 'Saves the url currently in clipboard for future access.', Command.USE: 'save [\'as\' save_name]', Command.FUNCTION: "save_site"},
     '_parse_': {Command.NAME: 'Parse URL', Command.DESCRIPTION: 'Parses the url currently in clipboard and prints the return.', Command.USE: 'parse', Command.FUNCTION: "parse"},
-    '_search_': {Command.NAME: 'Search Site', Command.DESCRIPTION: 'Searches the site for the given query, provided site\'s search url has been previously saved.', Command.USE: 'search [site name] for [query]', Command.FUNCTION: "search_site"}
+    '_search_': {Command.NAME: 'Search Site', Command.DESCRIPTION: 'Searches the site for the given query, provided site\'s search url has been previously saved.', Command.USE: 'search [site name] for [query]', Command.FUNCTION: "search_site"},
+    '_list_': {Command.NAME: 'List Web Info', Command.DESCRIPTION: 'Displays the requested information.', Command.USE: 'list [info specifier][filter terms]', Command.FUNCTION: "list_info"}
 }
 
 
@@ -44,12 +45,12 @@ class Website(resource_handler.Resource_BC):
     path_name is optional, however only the domain and possibly the search pattern will be stored if path_name is not given.
     Raises ValueError if a given url does not validate.
     '''
-    _domain = ""
-    _base = ""
-    _query = ""
-    _paths = {}
 
     def __init__(self, url:str=None, path_name:str=None):
+        self._domain = ""
+        self._base = ""
+        self._query = ""
+        self._paths = {}
         if url:
             self.store_location(url=url, path_name=path_name)
     
@@ -127,6 +128,15 @@ class Website(resource_handler.Resource_BC):
             return False
         return True
 
+    def get_info(self):
+        '''Returns a dictionary containing the domain, query, and paths of this website.
+        '''
+        info = {}
+        info["domain"] = self.domain
+        info["query"] = self._query
+        info["paths"] = self._paths
+        return info
+
     def get_greedy_match(self, match_string:str, minimum_word_size:int=2):
         '''Greedy matches between match_string and stored path names.
         Returns the best match (even if it isn't a good match) as a dict containing "match" and "char_count".
@@ -187,6 +197,57 @@ class _Lock_Bypass():
     def __exit__(self, type, value, traceback):
         dprint("Finished bypassing lock")
 
+
+async def form_display_string(website_info:dict):
+    '''Given appropriate info, returns the display string for the website.
+    '''
+    details_offset = 0
+    search = website_info.get("query", None)
+
+    for path_name in website_info.get("paths", {}).keys():
+        details_offset = max(len(path_name), details_offset)
+
+    if search:
+        details_offset = max(len("search"), details_offset)
+        search = ':'.join((pad_string(string="search", length=details_offset, pad_char='='), search))
+    else:
+        search = ""
+    display_strings = []
+    display_strings.append(' | '.join((website_info.get("domain", ""), search)))
+    domain_offset = len(website_info.get("domain", ""))
+    for path_name, path in website_info.get("paths", {}).items():
+        path_string = ':'.join((pad_string(string=path_name, length=details_offset, pad_char='-'), path))
+        display_strings.append(' | '.join((pad_string(string="", length=domain_offset), path_string)))
+    return '\n'.join(display_strings)
+
+async def list_info(msg):
+    if "website" in msg.data:
+        #bad use of distill_msg, it needs rework
+        distilled = distill_msg(msg=msg, sediment="website")
+        distilled = distill_msg(msg=distilled, sediment="list")
+        show_all = False
+        if "_all_" in distilled.data or "_every" in distilled.data:
+            show_all = True
+        requested_sites = []
+        if not show_all:
+            for key in resource_handler.get_resource_keys(section=_WEBSITE_SECTION):
+                if intersect_strings(distilled.data, key)["char_count"] >= 4:
+                    requested_sites.append(key)
+        if len(requested_sites) <= 0:
+            show_all = True
+        display_strings = []
+        for key, ws in resource_handler.get_resources(section=_WEBSITE_SECTION):
+            if show_all or key in requested_sites:
+                try:
+                    display_strings.append(await form_display_string(website_info=ws.get_info()))
+                except:
+                    traceback.print_exc()
+        if len(display_strings) >= 1:
+            for display_string in display_strings:
+                print("")
+                print(display_string)
+            return True
+    return False
 
 async def parse(msg):
     url = pyperclip.paste()

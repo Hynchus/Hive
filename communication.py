@@ -6,6 +6,7 @@ import traceback
 import logging
 from contextlib import suppress
 import os
+import copy
 from datetime import datetime
 from decorators import print_func_name
 import cerebrate_config as cc, cerebratesinfo, command, mysysteminfo, remote_command, utilities
@@ -44,11 +45,11 @@ def distill_msg(msg, sediment):
     '''Moves the first sediment from msg.data to msg.header.
     Returns the distilled msg.
     '''
-    #sediment = sediment.strip()
-    if sediment.lower() in msg.data.lower():
-        msg.header.append(sediment.lower())
-        msg.data = msg.data.replace(sediment, '', 1).strip()
-    return msg
+    distilled = copy.deepcopy(msg)
+    if sediment.lower() in distilled.data.lower():
+        distilled.header.append(sediment.lower())
+        distilled.data = distilled.data.replace(sediment, '', 1).strip()
+    return distilled
 
 async def handle_message(msg):
     '''Parses the message header and calls the appropriate function(s).

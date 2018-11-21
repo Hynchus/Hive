@@ -31,6 +31,22 @@ def dprint(*args):
     if cc.debug_in_effect:
         print(*args)
 
+def pad_string(string:str, length:int, pad_char:str=' '):
+    '''Pads a string to be total given length using the pad_char.
+    Pads look like this (given '-' as pad_char): "example string --------- "
+    Returns padded string.
+    '''
+    string = string.strip()
+    if len(string) >= length:
+        return string
+    pad_amount = length - len(string) - 2
+    padding = ' '
+    if pad_amount >= 0:
+        if len(pad_char) > 1:
+            pad_char = pad_char[0]
+        padding = ''.join((' ', pad_char * pad_amount, ' '))
+    return ''.join((string, padding))
+
 def move_file(current_path, destination_path):
     '''Moves a file from current_path to destination_path.
     Returns True if successful, False if not.

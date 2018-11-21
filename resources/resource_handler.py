@@ -134,7 +134,7 @@ def get_resource_keys(section:str):
 	keys = []
 	try:
 		with shelve.open(filename=_get_file_location(section=section), flag='r') as s:
-			keys = list(s.keys)
+			keys = list(s.keys())
 	except:
 		'''section doesn't exist'''
 	return keys
