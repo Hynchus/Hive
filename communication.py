@@ -20,7 +20,7 @@ UDP_PORT = 9999
 MAX_BYTE_TRANSFER = 1024
 COMMUNICATION_TIMEOUT = 14
 
-EOF = "_end_of_write_"
+EOF = b'\b'
 
 BY_REQUEST = "by request"
 TIMEOUT = "timed out"
@@ -110,11 +110,12 @@ class Secretary(asyncio.Protocol):
         '''
         if not reader:
             return None
-        received = await reader.read(MAX_BYTE_TRANSFER)
+        data_size = await reader.readexactly(4)
+        data_size = int.from_bytes(bytes=data_size, byteorder='big')
         data = b''
-        while received != EOF:
-            data = data + received
+        while len(data) < data_size:
             received = await reader.read(MAX_BYTE_TRANSFER)
+            data = data + received
         msg = pickle.loads(data)
         return msg
 
@@ -129,14 +130,14 @@ class Secretary(asyncio.Protocol):
             return False
         #print("\n Sending ", msg, "\n")
         data = pickle.dumps(msg)
+        writer.write(len(data).to_bytes(length=4, byteorder='big'))
         index = 0
         while index < len(data):
             start_index = index
             index += MAX_BYTE_TRANSFER
             fragment = data[start_index:index]
             writer.write(fragment)
-        writer.write(EOF)
-        await writer.drain()
+            await writer.drain()
         return True
 
     @staticmethod
