@@ -20,6 +20,8 @@ UDP_PORT = 9999
 MAX_BYTE_TRANSFER = 1024
 COMMUNICATION_TIMEOUT = 14
 
+EOF = "_end_of_write_"
+
 BY_REQUEST = "by request"
 TIMEOUT = "timed out"
 
@@ -108,7 +110,11 @@ class Secretary(asyncio.Protocol):
         '''
         if not reader:
             return None
-        data = await reader.read(MAX_BYTE_TRANSFER)
+        received = await reader.read(MAX_BYTE_TRANSFER)
+        data = b''
+        while received != EOF:
+            data = data + received
+            received = await reader.read(MAX_BYTE_TRANSFER)
         msg = pickle.loads(data)
         return msg
 
@@ -123,8 +129,13 @@ class Secretary(asyncio.Protocol):
             return False
         #print("\n Sending ", msg, "\n")
         data = pickle.dumps(msg)
-        #May want to check for size of data <= MAX_BYTE_TRANS
-        writer.write(data)
+        index = 0
+        while index < len(data):
+            start_index = index
+            index += MAX_BYTE_TRANSFER
+            fragment = data[start_index:index]
+            writer.write(fragment)
+        writer.write(EOF)
         await writer.drain()
         return True
 
@@ -231,7 +242,7 @@ class Secretary(asyncio.Protocol):
     async def __initiate_connection(cerebrate_mac):
         '''Tries to open a connection with given cerebrate.
         Throws an asyncio.TimeoutError if no connection is made.
-        Returns a reader, writer pair. Both will be none if no connection is made.
+        Returns a reader, writer pair. Both will be None if no connection is made.
         '''
         if cerebrate_mac == mysysteminfo.get_mac_address():
             return None, None
@@ -256,6 +267,7 @@ class Secretary(asyncio.Protocol):
         """
         dprint(msg.header)
         dprint(msg.data)
+        print("communicating: ", msg.header)
         result_string = "Fail"
         try:
             reader, writer = await Secretary.__initiate_connection(cerebrate_mac=cerebrate_mac)

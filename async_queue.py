@@ -1,5 +1,6 @@
 import asyncio
 import cerebrate_config as cc
+import copy
 
 _loop = None
 
@@ -22,16 +23,16 @@ def initialize_async_queue(event_loop=None):
 async def _handle_queue():
     global _queue
     while not cc.my_state_event[cc.State.TERMINATING].is_set():
-        await _coroutine_queued.is_set()
+        await _coroutine_queued.wait()
+        temp_queue = copy.deepcopy(_queue)
         _coroutine_queued.clear()
-        temp_queue = _queue
         for coroutine in temp_queue:
             _queue.remove(coroutine)
             asyncio.ensure_future(coroutine, loop=_loop)
         
 
 def queue_coroutine(coroutine):
-    '''Enqueues the given coroutine to be run in the current event_loop.
+    '''Queues the given coroutine to be run in the current event_loop.
     Does not return anything.
     '''
     global _queue

@@ -52,10 +52,11 @@ def _update_resources_modified_time(resources:dict):
 
 def propagate_resources(section:str, timestamped_resources:dict):
 	overmind_mac = cerebratesinfo.get_overmind_mac()
+	msg = communication.Message("update_resources", ':'.join((str(Resource.SECTION), section)), data=[timestamped_resources])
 	if get_mac_address() == overmind_mac:
-		run_coroutine(communication.Secretary.broadcast_message(msg=communication.Message("update_resources", ':'.join((str(Resource.SECTION), section)), data=[timestamped_resources])))
+		run_coroutine(communication.Secretary.broadcast_message(msg=msg))
 	else:
-		run_coroutine(communication.Secretary.communicate_message(overmind_mac, msg=communication.Message("update_resources", ':'.join((str(Resource.SECTION), section)), data=[timestamped_resources])))
+		run_coroutine(communication.Secretary.communicate_message(cerebrate_mac=overmind_mac, msg=msg))
 
 def store_resources(section:str, resources:dict):
 	'''Saves  resources for later reference, overwriting existing records with the same keys.
