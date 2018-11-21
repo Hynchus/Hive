@@ -5,7 +5,7 @@ from resources import resource_handler
 from definitions import Command
 from mysysteminfo import get_my_directory
 from decorators import athreaded
-from utilities import get_greedy_match, dprint
+from utilities import get_greedy_match, intersect_strings, dprint, pad_string
 from communication import distill_msg, Secretary, Message
 from feedback import feedback
 from validators.url import url as validate_url
@@ -27,7 +27,8 @@ _commands = {
     '_google_': {Command.NAME: 'Google', Command.DESCRIPTION: 'Searches Google for request.', Command.USE: 'google [request]', Command.FUNCTION: "google"},
     '_save_': {Command.NAME: 'Save Site', Command.DESCRIPTION: 'Saves the url currently in clipboard for future access.', Command.USE: 'save [\'as\' save_name]', Command.FUNCTION: "save_site"},
     '_parse_': {Command.NAME: 'Parse URL', Command.DESCRIPTION: 'Parses the url currently in clipboard and prints the return.', Command.USE: 'parse', Command.FUNCTION: "parse"},
-    '_search_': {Command.NAME: 'Search Site', Command.DESCRIPTION: 'Searches the site for the given query, provided site\'s search url has been previously saved.', Command.USE: 'search [site name] for [query]', Command.FUNCTION: "search_site"}
+    '_search_': {Command.NAME: 'Search Site', Command.DESCRIPTION: 'Searches the site for the given query, provided site\'s search url has been previously saved.', Command.USE: 'search [site name] for [query]', Command.FUNCTION: "search_site"},
+    '_list_': {Command.NAME: 'List Web Info', Command.DESCRIPTION: 'Displays the requested information.', Command.USE: 'list [info specifier][filter terms]', Command.FUNCTION: "list_info"}
 }
 
 
@@ -38,24 +39,37 @@ _browser = None
 _browser_lock = Lock()
 
 
-class Website:
+class Website(resource_handler.Resource_BC):
     '''Holds information about the given website.
     URL is optional, however the returned Website will be empty if no URL is given. Use Website.store_location() on a Website to store a url in it.
     path_name is optional, however only the domain and possibly the search pattern will be stored if path_name is not given.
     Raises ValueError if a given url does not validate.
     '''
-    _domain = ""
-    _base = ""
-    _query = ""
-    _paths = {}
 
     def __init__(self, url:str=None, path_name:str=None):
+        self._domain = ""
+        self._base = ""
+        self._query = ""
+        self._paths = {}
         if url:
             self.store_location(url=url, path_name=path_name)
     
     @property
     def domain(self):
         return self._domain
+
+    def update(self, resource):
+        '''Updates this resource instance with the given resource instance.
+        Raises EnvironmentError if given resource instance does not match this instance.
+        '''
+        try:
+            super().update(resource=resource)
+        except:
+            raise
+        if self.domain != resource.domain:
+            return False
+        self._paths.update(resource._paths)
+        return True
 
     def _store_query_pattern(self, parsed_url:ParseResult):
         if '=' in parsed_url.query:
@@ -113,6 +127,15 @@ class Website:
         if self.domain != urlparse(url).netloc:
             return False
         return True
+
+    def get_info(self):
+        '''Returns a dictionary containing the domain, query, and paths of this website.
+        '''
+        info = {}
+        info["domain"] = self.domain
+        info["query"] = self._query
+        info["paths"] = self._paths
+        return info
 
     def get_greedy_match(self, match_string:str, minimum_word_size:int=2):
         '''Greedy matches between match_string and stored path names.
@@ -175,6 +198,57 @@ class _Lock_Bypass():
         dprint("Finished bypassing lock")
 
 
+async def form_display_string(website_info:dict):
+    '''Given appropriate info, returns the display string for the website.
+    '''
+    details_offset = 0
+    search = website_info.get("query", None)
+
+    for path_name in website_info.get("paths", {}).keys():
+        details_offset = max(len(path_name), details_offset)
+
+    if search:
+        details_offset = max(len("search"), details_offset)
+        search = ':'.join((pad_string(string="search", length=details_offset, pad_char='='), search))
+    else:
+        search = ""
+    display_strings = []
+    display_strings.append(' | '.join((website_info.get("domain", ""), search)))
+    domain_offset = len(website_info.get("domain", ""))
+    for path_name, path in website_info.get("paths", {}).items():
+        path_string = ':'.join((pad_string(string=path_name, length=details_offset, pad_char='-'), path))
+        display_strings.append(' | '.join((pad_string(string="", length=domain_offset), path_string)))
+    return '\n'.join(display_strings)
+
+async def list_info(msg):
+    if "website" in msg.data:
+        #bad use of distill_msg, it needs rework
+        distilled = distill_msg(msg=msg, sediment="website")
+        distilled = distill_msg(msg=distilled, sediment="list")
+        show_all = False
+        if "_all_" in distilled.data or "_every" in distilled.data:
+            show_all = True
+        requested_sites = []
+        if not show_all:
+            for key in resource_handler.get_resource_keys(section=_WEBSITE_SECTION):
+                if intersect_strings(distilled.data, key)["char_count"] >= 4:
+                    requested_sites.append(key)
+        if len(requested_sites) <= 0:
+            show_all = True
+        display_strings = []
+        for key, ws in resource_handler.get_resources(section=_WEBSITE_SECTION):
+            if show_all or key in requested_sites:
+                try:
+                    display_strings.append(await form_display_string(website_info=ws.get_info()))
+                except:
+                    traceback.print_exc()
+        if len(display_strings) >= 1:
+            for display_string in display_strings:
+                print("")
+                print(display_string)
+            return True
+    return False
+
 async def parse(msg):
     url = pyperclip.paste()
     print("url = ", url)
@@ -218,7 +292,7 @@ def save_site(msg):
         ws = Website()
     ws.store_location(url=url, path_name=path_name)
     resources = {ws.domain: ws}
-    resource_handler.set_resources(section=_WEBSITE_SECTION, resources=resources)
+    resource_handler.store_resources(section=_WEBSITE_SECTION, resources=resources)
     return True
 
 @athreaded
@@ -226,7 +300,6 @@ def search_site(msg):
     data = distill_msg(msg=msg, sediment="search").data.strip()
     if not data:
         return False
-    search_url = None
     try:
         parsed_data = data.split("for")
         site_name = parsed_data[0]
@@ -242,6 +315,7 @@ def search_site(msg):
 
 def _start_browser(lock=_browser_lock):
     global _browser
+    _quit_browser(lock=lock)
     with lock:
         if cc.feedback_on_commands():
             feedback("Opening a new browser, just a moment...")
@@ -377,6 +451,8 @@ def open_browser(msg=None):
         #get match_string from msg, get URL from Website using match_string
         data = distill_msg(msg=msg, sediment="open").data.strip()
         url = Website.get_url_greedy_match(match_string=data)
+        if not url and not "browser" in data:
+            return False
     return _open_browser(url=url)
     
 @athreaded

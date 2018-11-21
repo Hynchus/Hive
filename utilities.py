@@ -8,6 +8,7 @@ from collections import defaultdict
 from aioconsole import ainput
 import cerebrate_config as cc, mysysteminfo
 from definitions import CEREBRATE_FILE_EXTENSIONS
+from async_queue import queue_coroutine
 
 
 async def prompt(prompt_string:str):
@@ -29,6 +30,22 @@ def dprint(*args):
     '''
     if cc.debug_in_effect:
         print(*args)
+
+def pad_string(string:str, length:int, pad_char:str=' '):
+    '''Pads a string to be total given length using the pad_char.
+    Pads look like this (given '-' as pad_char): "example string --------- "
+    Returns padded string.
+    '''
+    string = string.strip()
+    if len(string) >= length:
+        return string
+    pad_amount = length - len(string) - 2
+    padding = ' '
+    if pad_amount >= 0:
+        if len(pad_char) > 1:
+            pad_char = pad_char[0]
+        padding = ''.join((' ', pad_char * pad_amount, ' '))
+    return ''.join((string, padding))
 
 def move_file(current_path, destination_path):
     '''Moves a file from current_path to destination_path.
@@ -118,3 +135,11 @@ def get_greedy_match(match_string:str, possible_matches:list, minimum_word_size:
         return {"match": None, "char_count": None}
     match = sorted(matches.items(), key=lambda x: x[1], reverse=True)[0]
     return {"match": match[0], "char_count": match[1]}
+
+def run_coroutine(coroutine):
+    '''Attempts to run the given coroutine in the future.
+    Does not return anything.
+    '''
+    if not coroutine:
+        return
+    queue_coroutine(coroutine=coroutine)

@@ -6,6 +6,7 @@ import traceback
 import logging
 from contextlib import suppress
 import os
+import copy
 from datetime import datetime
 from decorators import print_func_name
 import cerebrate_config as cc, cerebratesinfo, command, mysysteminfo, remote_command, utilities
@@ -18,6 +19,8 @@ UDP_PORT = 9999
 
 MAX_BYTE_TRANSFER = 1024
 COMMUNICATION_TIMEOUT = 14
+
+EOF = b'\b'
 
 BY_REQUEST = "by request"
 TIMEOUT = "timed out"
@@ -44,11 +47,11 @@ def distill_msg(msg, sediment):
     '''Moves the first sediment from msg.data to msg.header.
     Returns the distilled msg.
     '''
-    #sediment = sediment.strip()
-    if sediment.lower() in msg.data.lower():
-        msg.header.append(sediment.lower())
-        msg.data = msg.data.replace(sediment, '', 1).strip()
-    return msg
+    distilled = copy.deepcopy(msg)
+    if sediment.lower() in distilled.data.lower():
+        distilled.header.append(sediment.lower())
+        distilled.data = distilled.data.replace(sediment, '', 1).strip()
+    return distilled
 
 async def handle_message(msg):
     '''Parses the message header and calls the appropriate function(s).
@@ -56,7 +59,6 @@ async def handle_message(msg):
     '''
     success = True
     try:
-        Secretary._made_contact(mac=msg.sender_mac, ip=msg.sender_ip)
         if cc.CLOSE_CONNECTION in msg.header:
             return cc.CLOSE_CONNECTION, BY_REQUEST
         elif cc.FILE_TRANSFER in msg.header:
@@ -69,8 +71,7 @@ async def handle_message(msg):
         logging.error(ex)
         return cc.CLOSE_CONNECTION, "ERROR"
     finally:
-        if success:
-            Secretary._made_contact(mac=msg.sender_mac, time=True)
+        Secretary._made_contact(mac=msg.sender_mac, time=True)
 
 class Secretary(asyncio.Protocol):
     """Handles connections with other Cerebrates.
@@ -107,7 +108,12 @@ class Secretary(asyncio.Protocol):
         '''
         if not reader:
             return None
-        data = await reader.read(MAX_BYTE_TRANSFER)
+        data_size = await reader.readexactly(4)
+        data_size = int.from_bytes(bytes=data_size, byteorder='big')
+        data = b''
+        while len(data) < data_size:
+            received = await reader.read(MAX_BYTE_TRANSFER)
+            data = data + received
         msg = pickle.loads(data)
         return msg
 
@@ -122,9 +128,14 @@ class Secretary(asyncio.Protocol):
             return False
         #print("\n Sending ", msg, "\n")
         data = pickle.dumps(msg)
-        #May want to check for size of data <= MAX_BYTE_TRANS
-        writer.write(data)
-        await writer.drain()
+        writer.write(len(data).to_bytes(length=4, byteorder='big'))
+        index = 0
+        while index < len(data):
+            start_index = index
+            index += MAX_BYTE_TRANSFER
+            fragment = data[start_index:index]
+            writer.write(fragment)
+            await writer.drain()
         return True
 
     @staticmethod
@@ -230,7 +241,7 @@ class Secretary(asyncio.Protocol):
     async def __initiate_connection(cerebrate_mac):
         '''Tries to open a connection with given cerebrate.
         Throws an asyncio.TimeoutError if no connection is made.
-        Returns a reader, writer pair. Both will be none if no connection is made.
+        Returns a reader, writer pair. Both will be None if no connection is made.
         '''
         if cerebrate_mac == mysysteminfo.get_mac_address():
             return None, None
@@ -253,7 +264,7 @@ class Secretary(asyncio.Protocol):
         Returns a cc.SUCCESS if connection and initial write are successful.
         No guarantee after that.
         """
-        dprint(msg.header)
+        dprint("Communicating: ", msg.header)
         dprint(msg.data)
         result_string = "Fail"
         try:

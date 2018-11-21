@@ -11,6 +11,7 @@ try:
     import traceback
     import logging
     from contextlib import suppress
+    from async_queue import initialize_async_queue
 except ImportError:
     install_requirements()
     restart_cerebrate()
@@ -42,7 +43,7 @@ async def audio_listener(loop):
             await command.run_command(msg=communication.Message("cmd", "voice", data=voice_input))
         except EnvironmentError:
             cc.accept_audio_control.clear()
-        except Exception as ex:
+        except Exception:
             traceback.print_exc()
             
 def start_listeners(loop):
@@ -52,6 +53,7 @@ def start_listeners(loop):
 
 def setup_loop():
     loop = asyncio.get_event_loop()
+    initialize_async_queue(event_loop=loop)
     return loop
 
 def say_hello():
