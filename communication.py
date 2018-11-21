@@ -59,7 +59,6 @@ async def handle_message(msg):
     '''
     success = True
     try:
-        Secretary._made_contact(mac=msg.sender_mac, ip=msg.sender_ip)
         if cc.CLOSE_CONNECTION in msg.header:
             return cc.CLOSE_CONNECTION, BY_REQUEST
         elif cc.FILE_TRANSFER in msg.header:
@@ -72,8 +71,7 @@ async def handle_message(msg):
         logging.error(ex)
         return cc.CLOSE_CONNECTION, "ERROR"
     finally:
-        if success:
-            Secretary._made_contact(mac=msg.sender_mac, time=True)
+        Secretary._made_contact(mac=msg.sender_mac, time=True)
 
 class Secretary(asyncio.Protocol):
     """Handles connections with other Cerebrates.
@@ -266,9 +264,8 @@ class Secretary(asyncio.Protocol):
         Returns a cc.SUCCESS if connection and initial write are successful.
         No guarantee after that.
         """
-        dprint(msg.header)
+        dprint("Communicating: ", msg.header)
         dprint(msg.data)
-        print("communicating: ", msg.header)
         result_string = "Fail"
         try:
             reader, writer = await Secretary.__initiate_connection(cerebrate_mac=cerebrate_mac)
