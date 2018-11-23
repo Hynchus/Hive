@@ -199,7 +199,7 @@ class Secretary(asyncio.Protocol):
         '''
         while not Secretary.terminating:
             msg = await Secretary._read_message(reader=reader)
-            print("Received: ", msg.header)
+            #print("Received: ", msg.header)
             if msg.sender_mac == mysysteminfo.get_mac_address():
                 return "schizophrenia"
             action, message = await handle_message(msg=msg)
@@ -265,7 +265,7 @@ class Secretary(asyncio.Protocol):
         Returns a cc.SUCCESS if connection and initial write are successful.
         No guarantee after that.
         """
-        print("Communicating: ", msg.header)
+        #print("Communicating: ", msg.header)
         dprint(msg.data)
         result_string = "Fail"
         try:

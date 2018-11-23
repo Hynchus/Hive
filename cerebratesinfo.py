@@ -100,9 +100,9 @@ def update_cerebrate_record(cerebrate_record):
             db[mac] = default_dictionary()
         cerebrate_time = cerebrate_record.get(Record.LASTCONTACT, datetime.datetime(1, 1, 1))
         db_time = db[mac].get(Record.LASTCONTACT, datetime.datetime(1, 1, 1))
-        print(cerebrate_time, " vs ", db_time)
+        #print(cerebrate_time, " vs ", db_time)
         if cerebrate_time >= db_time:
-            print("Updating '", mac, "' record")
+            #print("Updating '", mac, "' record")
             dprint("Updating record:")
             dprint(cerebrate_record)
             db[mac] = cerebrate_record
@@ -170,7 +170,7 @@ def update_cerebrate_contact_time(mac):
         if not db.get(mac, None):
             db[mac] = default_dictionary()
             db[mac][Record.MAC] = mac
-        print("Updating '", mac, "' contact time")
+        #print("Updating '", mac, "' contact time")
         db[mac][Record.LASTCONTACT] = datetime.datetime.now()
     return True
 
