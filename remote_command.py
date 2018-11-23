@@ -67,8 +67,9 @@ async def _designate_overmind(mac):
     dprint("designating ", mac)
     cerebratesinfo.designate_overmind(mac=mac)
     if mac != mysysteminfo.get_mac_address():
-        dprint("asking for acknowledgment")
-        await communication.Secretary.communicate_message(cerebrate_mac=mac, msg=communication.Message("acknowledge", data={"version": cc.MY_VERSION}))
+        '''shouldn't need to ask for acknowledgment, cerebrates are already up to date'''
+        #dprint("asking for acknowledgment")
+        #await communication.Secretary.communicate_message(cerebrate_mac=mac, msg=communication.Message("acknowledge", data={"version": cc.MY_VERSION}))
     else:
         communication.Secretary.broadcast_message(msg=communication.Message("update_records", cc.OVERRULE, data=[cerebratesinfo.get_overmind_record()]))
 
