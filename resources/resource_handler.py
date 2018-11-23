@@ -13,6 +13,8 @@ from abc import ABC, abstractmethod
 RESOURCES_BASE_LOCATION = os.path.join(get_hive_directory(), "resources")
 RESOURCE_FILE_EXTENSION = "res"
 
+FOLDER_SEPARATOR = ':|:'
+
 MODIFIED_TIME = "res_modified_time"
 RESOURCE_VALUE = "res_value"
 
@@ -32,8 +34,9 @@ class Resource_BC(ABC):
 
 
 def _get_file_location(section:str):
-	filename = '.'.join((section, RESOURCE_FILE_EXTENSION))
-	filepath = os.path.join(RESOURCES_BASE_LOCATION, section)
+	path = section.split(FOLDER_SEPARATOR)
+	filename = '.'.join((path[len(path)-1], RESOURCE_FILE_EXTENSION))
+	filepath = os.path.join(RESOURCES_BASE_LOCATION, *path)
 	if not os.path.exists(filepath):
 		os.makedirs(filepath, exist_ok=True)
 	return os.path.join(filepath, filename)
