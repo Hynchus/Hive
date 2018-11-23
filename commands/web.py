@@ -162,7 +162,7 @@ class Website(resource_handler.Resource_BC):
         '''
         if not self._query.strip():
             return None
-        query = ''.join((self._query, query_string))
+        query = ''.join((self._query, query_string.strip()))
         return urljoin(base=self._base, url=query)
 
     @staticmethod

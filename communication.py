@@ -70,8 +70,8 @@ async def handle_message(msg):
         traceback.print_exc()
         logging.error(ex)
         return cc.CLOSE_CONNECTION, "ERROR"
-    finally:
-        Secretary._made_contact(mac=msg.sender_mac, time=True)
+    #finally:
+        #Secretary._made_contact(mac=msg.sender_mac, time=True)
 
 class Secretary(asyncio.Protocol):
     """Handles connections with other Cerebrates.
@@ -199,6 +199,7 @@ class Secretary(asyncio.Protocol):
         '''
         while not Secretary.terminating:
             msg = await Secretary._read_message(reader=reader)
+            #print("Received: ", msg.header)
             if msg.sender_mac == mysysteminfo.get_mac_address():
                 return "schizophrenia"
             action, message = await handle_message(msg=msg)
@@ -251,7 +252,7 @@ class Secretary(asyncio.Protocol):
         try:
             fut = asyncio.open_connection(host=cerebrate_ip, port=TCP_PORT, loop=event_loop)
             reader, writer = await asyncio.wait_for(fut, timeout=3)
-            Secretary._made_contact(mac=cerebrate_mac, ip=cerebrate_ip)
+            #Secretary._made_contact(mac=cerebrate_mac, ip=cerebrate_ip)
         except asyncio.TimeoutError:
             print("Failed to connect to ", cerebrate_ip)
             raise asyncio.TimeoutError()
@@ -264,7 +265,7 @@ class Secretary(asyncio.Protocol):
         Returns a cc.SUCCESS if connection and initial write are successful.
         No guarantee after that.
         """
-        dprint("Communicating: ", msg.header)
+        #print("Communicating: ", msg.header)
         dprint(msg.data)
         result_string = "Fail"
         try:
