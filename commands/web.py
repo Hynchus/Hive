@@ -10,14 +10,17 @@ from communication import distill_msg, Secretary, Message
 from feedback import feedback
 from validators.url import url as validate_url
 from urllib.parse import urlparse, urljoin, ParseResult
+from urllib import request
 import cerebratesinfo
 import cerebrate_config as cc
 import asyncio
 import os
 import traceback
 import enum
+import re
 from threading import Lock
 import pyperclip
+from commands import media_player
 
 
 
@@ -28,7 +31,8 @@ _commands = {
     '_save_': {Command.NAME: 'Save Site', Command.DESCRIPTION: 'Saves the url currently in clipboard for future access.', Command.USE: 'save [\'as\' save_name]', Command.FUNCTION: "save_site"},
     '_parse_': {Command.NAME: 'Parse URL', Command.DESCRIPTION: 'Parses the url currently in clipboard and prints the return.', Command.USE: 'parse', Command.FUNCTION: "parse"},
     '_search_': {Command.NAME: 'Search Site', Command.DESCRIPTION: 'Searches the site for the given query, provided site\'s search url has been previously saved.', Command.USE: 'search [site name] for [query]', Command.FUNCTION: "search_site"},
-    '_list_': {Command.NAME: 'List Web Info', Command.DESCRIPTION: 'Displays the requested information.', Command.USE: 'list [info specifier][filter terms]', Command.FUNCTION: "list_info"}
+    '_list_': {Command.NAME: 'List Web Info', Command.DESCRIPTION: 'Displays the requested information.', Command.USE: 'list [info specifier][filter terms]', Command.FUNCTION: "list_info"},
+    '_youtube_': {Command.NAME: 'Play Youtube video', Command.DESCRIPTION: 'Plays the top result on Youtube from given search query', Command.USE: 'youtube [query]', Command.FUNCTION: "youtube"}
 }
 
 
@@ -425,18 +429,19 @@ def google(msg):
             '''browser/tab was closed by an outside force'''
             _start_browser(lock=_Lock_Bypass())
         _browser.get(''.join(('https://www.google.ca/search?q=', query)))
-        load_cookies()
+
     return True
 
-def _close_handle(handle, lock=_browser_lock):
-    try:
-        with lock:
-            _browser.switch_to.window(handle)
-            _save_current_domain()
-            _browser.close()
-    except:
-        traceback.print_exc()
-        '''tab (or browser) is already closed'''
+@athreaded
+def youtube(msg):
+    query = msg.data.lower()
+    query = query.split('youtube', 1)[1].strip()
+    youtube_search = "http://www.youtube.com/results?search_query=" + '+'.join((query.split(' ')))
+    html_content = request.urlopen(youtube_search)
+    search_results = re.findall(r'href=\"\/watch\?v=(.{11})', html_content.read().decode())
+    top_result = "http://www.youtube.com/watch?v=" + search_results[0]
+    media_player.play_video(url=top_result, identifier=query)
+
 
 def _close_browser(msg=None, lock=_browser_lock):
     '''Closes the current window, or the target window if given in Message.'''
