@@ -7,7 +7,7 @@ from definitions import Command
 
 
 _commands = {
-    '_close_': {Command.NAME: 'Close media playback', Command.DESCRIPTION: 'Closes the specified media', Command.USE: 'close [identifier]', Command.FUNCTION: "close"}
+    '_stop_': {Command.NAME: 'Stop media playback', Command.DESCRIPTION: 'Stops the specified media', Command.USE: 'stop [identifier]', Command.FUNCTION: "close"}
 }
 
 active_players = {}
@@ -80,5 +80,5 @@ def close_video(identifier:str):
 
 @athreaded
 def close(msg):
-    identifier = msg.data.lower().split('close', 1)[1].strip()
+    identifier = msg.data.lower().split('stop', 1)[1].strip()
     return close_video(identifier=identifier)
