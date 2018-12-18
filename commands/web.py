@@ -269,7 +269,21 @@ async def parse(msg):
         print("Stored search URL", '\n', search_url)
 
     return True
-    
+
+def _save_url(url, path_name=None):
+    if not validate_url(url):
+        return
+    ws = None
+    for _, site in resource_handler.get_resources(section=_WEBSITE_SECTION):
+        if site.is_same_site(url=url):
+            ws = site
+            break
+    if not ws:
+        ws = Website()
+    ws.store_location(url=url, path_name=path_name)
+    resources = {ws.domain: ws}
+    resource_handler.store_resources(section=_WEBSITE_SECTION, resources=resources)
+
 @athreaded
 def save_site(msg):
     '''If clipboard contains a url, it will be saved according to the name given in msg.data.
@@ -287,16 +301,7 @@ def save_site(msg):
             path_name = data.split("as")[1].strip()
         except:
             '''no 'as' found, so path_name cannot be extracted from given data'''
-    ws = None
-    for _, site in resource_handler.get_resources(section=_WEBSITE_SECTION):
-        if site.is_same_site(url=url):
-            ws = site
-            break
-    if not ws:
-        ws = Website()
-    ws.store_location(url=url, path_name=path_name)
-    resources = {ws.domain: ws}
-    resource_handler.store_resources(section=_WEBSITE_SECTION, resources=resources)
+    _save_url(url=url, path_name=path_name)
     return True
 
 @athreaded
@@ -317,6 +322,45 @@ def search_site(msg):
     except:
         '''input does not match pattern'''
 
+def get_current_domain():
+    if not _browser:
+        raise EnvironmentError
+    return urlparse(_browser.current_url).netloc
+
+def get_cookies_section(domain:str):
+    base = "website_cookies"
+    domain_name = domain.strip()
+    if not domain_name:
+        return base
+    return resource_handler.FOLDER_SEPARATOR.join((base, domain_name))
+
+def save_cookies():
+    if not _browser:
+        return
+    cookies = {}
+    domain = get_current_domain()
+    for cookie in _browser.get_cookies():
+        cookies[resource_handler.FOLDER_SEPARATOR.join((domain, cookie.get("name", '')))] = cookie
+    resource_handler.store_resources(section=get_cookies_section(domain=domain), resources=cookies)
+
+def load_cookies():
+    if not _browser:
+        return
+    cookie_count = 0
+    for _, cookie in resource_handler.get_resources(section=get_cookies_section(domain=get_current_domain())):
+        cookie_count += 1
+        _browser.add_cookie(cookie_dict=cookie)
+    if cookie_count > 0:
+        _browser.refresh()
+
+def _save_current_domain():
+    if not _browser:
+        return
+    save_cookies()
+    parsed_url = urlparse(_browser.current_url)
+    current_domain = '://'.join((parsed_url.scheme, parsed_url.netloc))
+    _save_url(url=current_domain)
+
 def _start_browser(lock=_browser_lock):
     global _browser
     _quit_browser(lock=lock)
@@ -336,6 +380,7 @@ def _open_tab(url:str="", lock=_browser_lock, recurse=True):
             _browser.execute_script(''.join(("window.open('", url, "')")))
             new_handle = [handle for handle in _browser.window_handles if handle not in handles_before][0]
             _browser.switch_to.window(new_handle)
+            load_cookies()
         except:
             #_browser was closed by an outside force
             _start_browser(lock=_Lock_Bypass())
@@ -354,6 +399,7 @@ def _open_browser(url:str=None, lock=_browser_lock):
             if not _browser:
                 _start_browser(lock=_Lock_Bypass())
                 _browser.get(new_url)
+                load_cookies()
             else:
                 _open_tab(url=new_url, lock=_Lock_Bypass())
             if cc.feedback_on_commands():
@@ -383,6 +429,7 @@ def google(msg):
             '''browser/tab was closed by an outside force'''
             _start_browser(lock=_Lock_Bypass())
         _browser.get(''.join(('https://www.google.ca/search?q=', query)))
+
     return True
 
 @athreaded
@@ -395,6 +442,7 @@ def youtube(msg):
     top_result = "http://www.youtube.com/watch?v=" + search_results[0]
     media_player.play_video(url=top_result, identifier=query)
 
+
 def _close_browser(msg=None, lock=_browser_lock):
     '''Closes the current window, or the target window if given in Message.'''
     global _browser
@@ -406,8 +454,8 @@ def _close_browser(msg=None, lock=_browser_lock):
             for handle in _browser.window_handles:
                 _browser.switch_to.window(handle)
                 open_window_titles.append(_browser.title)
-            data = distill_msg(msg, "close").data
-            if data != "":
+            data = distill_msg(msg, "close").data.strip()
+            if data:
                 match = get_greedy_match(match_string=data, possible_matches=open_window_titles)
                 if match.get("char_count", 0) > 2:
                     window_title = match.get("match", None)
@@ -419,24 +467,24 @@ def _close_browser(msg=None, lock=_browser_lock):
         with lock:
             if not window_title:
                 try:
-                    _browser.close()
+                    _close_handle(handle=_browser.current_window_handle, lock=_Lock_Bypass())
                 except:
-                    _browser.switch_to.window(_browser.window_handles[len(_browser.window_handles)-1])
-                    _browser.close()
+                    _close_handle(handle=_browser.window_handles[len(_browser.window_handles)-1], lock=_Lock_Bypass())
             elif window_title.lower() in _browser.title.lower():
-                _browser.close()
+                _close_handle(handle=_browser.current_window_handle, lock=_Lock_Bypass())
             else:
                 active_handle = _browser.current_window_handle
                 for handle in _browser.window_handles:
                     _browser.switch_to.window(handle)
                     if window_title.lower() in _browser.title.lower():
-                        _browser.close()
+                        _close_handle(handle=handle, lock=_Lock_Bypass())
                         break
                 try:
                     _browser.switch_to.window(active_handle)
                 except:
                     '''active handle was closed'''
-                    _browser.switch_to.window(_browser.window_handles[len(_browser.window_handles)-1])
+                    if len(_browser.window_handles) > 0:
+                        _browser.switch_to.window(_browser.window_handles[len(_browser.window_handles)-1])
         if len(_browser.window_handles) <= 0:
             _quit_browser()
     except:
@@ -451,6 +499,8 @@ def _quit_browser(lock=_browser_lock):
     global _browser
     with lock:
         try:
+            while len(_browser.window_handles) > 0:
+                _close_handle(_browser.window_handles[0], lock=_Lock_Bypass())
             _browser.quit()
         except:
             '''browser already doesn't exist'''
