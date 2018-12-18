@@ -429,7 +429,7 @@ def google(msg):
             '''browser/tab was closed by an outside force'''
             _start_browser(lock=_Lock_Bypass())
         _browser.get(''.join(('https://www.google.ca/search?q=', query)))
-
+        load_cookies()
     return True
 
 @athreaded
@@ -442,6 +442,15 @@ def youtube(msg):
     top_result = "http://www.youtube.com/watch?v=" + search_results[0]
     media_player.play_video(url=top_result, identifier=query)
 
+def _close_handle(handle, lock=_browser_lock):
+    try:
+        with lock:
+            _browser.switch_to.window(handle)
+            _save_current_domain()
+            _browser.close()
+    except:
+        traceback.print_exc()
+        '''tab (or browser) is already closed'''
 
 def _close_browser(msg=None, lock=_browser_lock):
     '''Closes the current window, or the target window if given in Message.'''
