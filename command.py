@@ -7,7 +7,7 @@ from importlib import import_module, util
 from utilities import aprint, dprint, intersect_strings
 from definitions import Command
 from communication import distill_msg
-from commands import emit, info, system, web
+from commands import emit, info, system, web, media_player
 import cerebrate_config as cc, mysysteminfo
 
 

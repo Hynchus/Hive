@@ -1,3 +1,24 @@
+def install_requirements():
+    print("Installing requirements")
+    import subprocess
+    import os
+    import sys
+    for directoryname, filenames, _ in os.walk(os.path.dirname(__file__)):
+        for filename in filenames:
+            if os.path.splitext(filename)[1] == '.whl':
+                try:
+                    subprocess.check_call([sys.executable, '-m', 'pip', 'install', os.path.join(directoryname, filename)])
+                except Exception as ex:
+                    print("Could not install ", filename)
+                    dprint(ex)
+    subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-r', 'requirements.edy'])
+    
+def restart_cerebrate():
+    import os
+    import sys
+    print("Restarting cerebrate...")
+    os.execv(sys.executable, ['python'] + sys.argv)
+
 try:
     import sys
     import os
@@ -100,23 +121,6 @@ def update_requirements():
     import subprocess
     subprocess.Popen(['pip', 'freeze'], stdout=open(os.path.join(os.path.dirname(__file__), 'requirements.edy'), 'w'))
     return True
-
-def install_requirements():
-    print("Installing requirements")
-    import subprocess
-    for directoryname, filenames, _ in os.walk(os.path.dirname(__file__)):
-        for filename in filenames:
-            if os.path.splitext(filename)[1] == '.whl':
-                try:
-                    subprocess.check_call([sys.executable, '-m', 'pip', 'install', os.path.join(directoryname, filename)])
-                except Exception as ex:
-                    print("Could not install ", filename)
-                    dprint(ex)
-    subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-r', 'requirements.edy'])
-
-def restart_cerebrate():
-    print("Restarting cerebrate...")
-    os.execv(sys.executable, ['python'] + sys.argv)
 
 async def terminate(msg=None, loop=None):
     await say_goodbye()
