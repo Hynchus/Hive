@@ -1,18 +1,3 @@
-def install_requirements():
-    print("Installing requirements")
-    import subprocess
-    import os
-    import sys
-    for directoryname, filenames, _ in os.walk(os.path.dirname(__file__)):
-        for filename in filenames:
-            if os.path.splitext(filename)[1] == '.whl':
-                try:
-                    subprocess.check_call([sys.executable, '-m', 'pip', 'install', os.path.join(directoryname, filename)])
-                except Exception as ex:
-                    print("Could not install ", filename)
-                    dprint(ex)
-    subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-r', 'requirements.edy'])
-    
 def restart_cerebrate():
     import os
     import sys
@@ -25,17 +10,26 @@ try:
     import enum
     import signal
     import asyncio
+    import cerebrate_config as cc
     from aioconsole import ainput
-    import audio, cerebrate_config as cc, cerebratesinfo, command, communication, mysysteminfo, utilities
+    import audio, cerebratesinfo, command, communication, mysysteminfo, utilities
     from utilities import dprint, get_cerebrate_file_names
     from resources import resource_handler
     import traceback
     import logging
     from contextlib import suppress
     from async_queue import initialize_async_queue
-except ImportError:
-    install_requirements()
-    restart_cerebrate()
+except ImportError as ex:
+    print("Required libraries are missing.")
+    import requirements
+    if not cc.get_config("requirements_installed") and requirements.update_requirements() and requirements.install_requirements():
+        cc.set_config("requirements_installed", True)
+        restart_cerebrate()
+    else:
+        print(ex)
+        cc.set_config("requirements_installed", False)
+        sys.exit("Could not install requirements.")
+
 
 def sigint_handler(signum, frame):
     asyncio.ensure_future(terminate(), loop=asyncio.get_event_loop())
@@ -86,7 +80,7 @@ def say_hello():
     #Assume we are the only cerebrate up, temporarily designate ourself as Overmind
     cerebratesinfo.designate_overmind(mac=mysysteminfo.get_mac_address())
     #Contact existing Overmind, if there is one
-    communication.Secretary.broadcast_message(msg=communication.Message('acknowledge', data={"version": cc.MY_VERSION}))
+    communication.Secretary.broadcast_message(msg=communication.Message('acknowledge', data={"version": cc.my_version}))
 
 async def designate_successor():
     '''Establishes a new Overmind among the remaining (awake) cerebrates.
@@ -113,14 +107,6 @@ async def say_goodbye():
     cerebratesinfo.update_cerebrate_attribute(mac=mysysteminfo.get_mac_address(), record_attribute=cerebratesinfo.Record.STATUS, attribute_value=cerebratesinfo.Status.ASLEEP)
     cerebratesinfo.update_cerebrate_contact_time(mac=mysysteminfo.get_mac_address())
     await communication.Secretary.communicate_message(cerebrate_mac=successor_mac, msg=communication.Message("update_records", data=[cerebratesinfo.get_cerebrate_record(record_attribute=cerebratesinfo.Record.MAC, attribute_value=mysysteminfo.get_mac_address())]))
-    
-def update_requirements():
-    if not os.path.exists(os.path.join(os.path.dirname(__file__), 'development_cerebrate')):
-        return False
-    dprint("Updating requirements")
-    import subprocess
-    subprocess.Popen(['pip', 'freeze'], stdout=open(os.path.join(os.path.dirname(__file__), 'requirements.edy'), 'w'))
-    return True
 
 async def terminate(msg=None, loop=None):
     await say_goodbye()
@@ -131,6 +117,7 @@ async def terminate(msg=None, loop=None):
         loop.stop()
 
 if __name__ == '__main__':
+    cc.set_config("requirements_installed", False)
     logging.basicConfig(filename='cerebrate.log')
     signal.signal(signalnum=signal.SIGINT, handler=sigint_handler)
     loop = setup_loop()
