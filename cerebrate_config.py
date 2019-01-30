@@ -1,7 +1,17 @@
+import os
 import enum
 import asyncio
+import mysysteminfo
+import shelve
 
-MY_VERSION = 0.46
+
+CEREBRATE_CONFIG_PATH = os.path.join(mysysteminfo.get_hive_directory(), 'cerebrate_config.db')
+
+class Config_Keys(enum.Enum):
+    debug_in_effect = "debug"
+
+
+my_version = 0.46
 
 COMMAND = "cmd"
 REMOTE_COMMAND = "remotecmd"
@@ -22,7 +32,7 @@ NAME = "name"
 update_in_progress = False
 restart_cerebrate_on_terminate = False
 
-# Config flags
+# Config values (frequently checked)
 __feedback_on_commands = 0   # If anything above 0 returns True, otherwise False (feedback_on_commands())
 debug_in_effect = False
 
@@ -70,6 +80,26 @@ def feedback_on_commands(vote:bool=None):
             __feedback_on_commands -= 1
     return __feedback_on_commands > 0
 
+def set_config(config_key:str, config_value):
+    with shelve.open(CEREBRATE_CONFIG_PATH, writeback=True) as db:
+        db[config_key] = config_value
+    set_frequent_config_keys(config_key, config_value)
+
+def get_config(config_key:str):
+    with shelve.open(CEREBRATE_CONFIG_PATH, flag='r') as db:
+        if config_key in db:
+            value = db[config_key]
+            return value
+        else:
+            return False
+
+def set_frequent_config_keys(config_key:str, config_value):
+    if config_key == Config_Keys.debug_in_effect:
+        debug_in_effect = config_value
+
+def load_frequent_config_keys():
+    with shelve.open(CEREBRATE_CONFIG_PATH, flag='r') as db:
+        debug_in_effect = db.get(Config_Keys.debug_in_effect, False)
 
 change_my_state(state=State.INITIALIZING)
 accept_audio_control.clear()

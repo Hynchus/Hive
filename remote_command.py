@@ -3,11 +3,7 @@ import datetime
 import cerebrate_config as cc
 from utilities import aprint, dprint, get_cerebrate_file_names
 from decorators import print_func_name
-import cerebrate
-import command
-import communication
-import mysysteminfo
-import cerebratesinfo
+import cerebrate, cerebratesinfo, command, communication, mysysteminfo, requirements
 from definitions import Resource
 from resources import resource_handler
 
@@ -30,9 +26,9 @@ async def send_update(msg):
     version = msg.data.get("version", None)
     if not version:
         return cc.CLOSE_CONNECTION, "requester's version number not included"
-    if version >= cc.MY_VERSION:
+    if version >= cc.my_version:
         return cc.CLOSE_CONNECTION, "requester not out of date"
-    cerebrate.update_requirements()
+    requirements.update_requirements()
     dprint("Sending updates to ", msg.sender_mac)
     files = await get_cerebrate_file_names()
     success = await communication.Secretary.transfer_files(cerebrate_mac=msg.sender_mac, file_names=files)
@@ -52,12 +48,12 @@ async def check_version(msg):
     version = msg.data.get("version", None)
     if not version:
         return cc.CLOSE_CONNECTION, cc.FINISHED
-    if cc.MY_VERSION > version:
-        await communication.Secretary.communicate_message(cerebrate_mac=msg.sender_mac, msg=communication.Message("check_version", data={"version": cc.MY_VERSION}))
-    elif cc.MY_VERSION < version:
-        cc.update_in_progress = True #ugly
+    if cc.my_version > version:
+        await communication.Secretary.communicate_message(cerebrate_mac=msg.sender_mac, msg=communication.Message("check_version", data={"version": cc.my_version}))
+    elif cc.my_version < version:
+        cc.update_in_progress = True
         print("Updating...")
-        await communication.Secretary.communicate_message(cerebrate_mac=msg.sender_mac, msg=communication.Message("send_update", data={"version": cc.MY_VERSION}))
+        await communication.Secretary.communicate_message(cerebrate_mac=msg.sender_mac, msg=communication.Message("send_update", data={"version": cc.my_version}))
     return cc.CLOSE_CONNECTION, cc.FINISHED
 
 @print_func_name
@@ -69,7 +65,7 @@ async def _designate_overmind(mac):
     if mac != mysysteminfo.get_mac_address():
         '''shouldn't need to ask for acknowledgment, cerebrates are already up to date'''
         #dprint("asking for acknowledgment")
-        #await communication.Secretary.communicate_message(cerebrate_mac=mac, msg=communication.Message("acknowledge", data={"version": cc.MY_VERSION}))
+        #await communication.Secretary.communicate_message(cerebrate_mac=mac, msg=communication.Message("acknowledge", data={"version": cc.my_version}))
     else:
         communication.Secretary.broadcast_message(msg=communication.Message("update_records", cc.OVERRULE, data=[cerebratesinfo.get_overmind_record()]))
 
@@ -162,7 +158,7 @@ async def assume_overmind(msg):
 async def restart(msg):
     cc.restart_cerebrate_on_terminate = True
     if "cerebrate updated" in msg.data.lower():
-        cerebrate.install_requirements()
+        requirements.install_requirements()
     await cerebrate.terminate()
 
 async def run_command(msg):
