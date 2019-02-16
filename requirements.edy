@@ -1,6 +1,8 @@
-validators==0.12.4
+python_vlc==3.0.4106
 selenium==3.141.0
-aioconsole==0.1.11
+validators==0.12.4
 SpeechRecognition==3.8.1
-pyperclip==1.7.0
+aioconsole==0.1.11
 pafy==0.5.4
+pyperclip==1.7.0
+streamlink==1.0.0

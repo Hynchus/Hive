@@ -125,7 +125,7 @@ def intersect_strings(item_one:str, item_two:str, minimum_word_size:int=2):
 def get_greedy_match(match_string:str, possible_matches:list, minimum_word_size:int=2):
     '''Picks from possible_matches the string with the greediest matching with match_string and returns it.
     minimum_word_size is the floor for matching character sequences.
-    Returns a dict containing "match" and "char_count".
+    Returns a dict containing "match" and "char_count". These are each None if no matches were found.
     '''
     matches = defaultdict()
     for possible_match in possible_matches:

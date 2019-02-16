@@ -2,6 +2,7 @@ from decorators import threaded
 from utilities import aprint
 import enum
 import random
+import cerebrate_config as cc
 
 
 
@@ -21,11 +22,15 @@ _responses = {
 
 
 @threaded
-def feedback(output:str):
+def feedback(*args):
+    output = ''.join(args)
+    if not cc.feedback_on_commands():
+        return False
     aprint(output)
+    return True
     
 @threaded
 def feedback_response(response:Response):
     max_index = len(_responses[response]) - 1
     selection = random.randint(0, max_index)
-    feedback(_responses[response][selection])
+    return feedback(_responses[response][selection])
