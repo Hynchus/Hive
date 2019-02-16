@@ -19,6 +19,7 @@ def initialize_async_queue(event_loop=None):
     if not event_loop:
         event_loop = asyncio.get_event_loop()
     _loop = event_loop
+    asyncio.ensure_future(terminate(), loop=_loop)
     asyncio.ensure_future(_handle_queue(), loop=_loop)
 
 async def _handle_queue():
@@ -26,6 +27,8 @@ async def _handle_queue():
     while not cc.my_state_event[cc.State.TERMINATING].is_set():
         try:
             await _coroutine_queued.wait()
+            if cc.my_state_event[cc.State.TERMINATING].is_set():
+                return
             temp_queue = _queue
             _coroutine_queued.clear()
             for coroutine in temp_queue:
@@ -44,3 +47,11 @@ def queue_coroutine(coroutine):
         return
     _queue.append(coroutine)
     _coroutine_queued.set()
+
+async def terminate():
+    ''' Kicks queue out of wait state.
+    Waits until cc.my_state_event[TERMINATING] is set.
+     '''
+    await cc.my_state_event[cc.State.TERMINATING].wait()
+    _coroutine_queued.set()
+

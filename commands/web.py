@@ -32,6 +32,7 @@ _commands = {
     '_parse_': {Command.NAME: 'Parse URL', Command.DESCRIPTION: 'Parses the url currently in clipboard and prints the return.', Command.USE: 'parse', Command.FUNCTION: "parse"},
     '_search_': {Command.NAME: 'Search Site', Command.DESCRIPTION: 'Searches the site for the given query, provided site\'s search url has been previously saved.', Command.USE: 'search [site name] for [query]', Command.FUNCTION: "search_site"},
     '_list_': {Command.NAME: 'List Web Info', Command.DESCRIPTION: 'Displays the requested information.', Command.USE: 'list [info specifier][filter terms]', Command.FUNCTION: "list_info"},
+    
     '_youtube_': {Command.NAME: 'Play Youtube video', Command.DESCRIPTION: 'Plays the top result on Youtube from given search query', Command.USE: 'youtube [query]', Command.FUNCTION: "youtube"}
 }
 
